@@ -41,6 +41,42 @@ import {
   inputSchema as athleteStatsInputSchema,
   handleAthleteStats,
 } from "./tools/athlete.stats.js";
+import {
+  toolName as assessmentGetFullToolName,
+  description as assessmentGetFullDescription,
+  inputSchema as assessmentGetFullInputSchema,
+  handleAssessmentGetFull,
+} from "./tools/assessment.getFull.js";
+import {
+  toolName as anthropometrySearchToolName,
+  description as anthropometrySearchDescription,
+  inputSchema as anthropometrySearchInputSchema,
+  handleAnthropometrySearch,
+} from "./tools/anthropometry.search.js";
+import {
+  toolName as anthropometryGetByAssessmentToolName,
+  description as anthropometryGetByAssessmentDescription,
+  inputSchema as anthropometryGetByAssessmentInputSchema,
+  handleAnthropometryGetByAssessment,
+} from "./tools/anthropometry.getByAssessment.js";
+import {
+  toolName as questionnaireGetStructureToolName,
+  description as questionnaireGetStructureDescription,
+  inputSchema as questionnaireGetStructureInputSchema,
+  handleQuestionnaireGetStructure,
+} from "./tools/questionnaire.getStructure.js";
+import {
+  toolName as medicalStudiesGetByAssessmentToolName,
+  description as medicalStudiesGetByAssessmentDescription,
+  inputSchema as medicalStudiesGetByAssessmentInputSchema,
+  handleMedicalStudiesGetByAssessment,
+} from "./tools/medicalStudies.getByAssessment.js";
+import {
+  toolName as medicalStudiesGetByAthleteToolName,
+  description as medicalStudiesGetByAthleteDescription,
+  inputSchema as medicalStudiesGetByAthleteInputSchema,
+  handleMedicalStudiesGetByAthlete,
+} from "./tools/medicalStudies.getByAthlete.js";
 import type { z } from "zod";
 
 export interface ToolDef {
@@ -144,6 +180,73 @@ register({
   inputSchema: {},
   zodSchema: athleteStatsInputSchema as z.ZodTypeAny,
   handler: handleAthleteStats as (params: unknown) => Promise<ToolResponse<unknown>>,
+});
+
+register({
+  name: assessmentGetFullToolName,
+  description: assessmentGetFullDescription,
+  inputSchema: {
+    id: { type: "number", description: "Assessment ID (required)" },
+  },
+  zodSchema: assessmentGetFullInputSchema,
+  handler: handleAssessmentGetFull,
+});
+
+register({
+  name: anthropometrySearchToolName,
+  description: anthropometrySearchDescription,
+  inputSchema: {
+    athleteId: { type: "number", description: "Filter by athlete ID" },
+    assessmentId: { type: "number", description: "Filter by exact assessment ID" },
+    startDate: { type: "string", description: "Start of date span (YYYY-MM-DD, inclusive)" },
+    endDate: { type: "string", description: "End of date span (YYYY-MM-DD, inclusive)" },
+    limit: { type: "number", description: "Max results (1–100, default 20)" },
+  },
+  zodSchema: anthropometrySearchInputSchema,
+  handler: handleAnthropometrySearch,
+});
+
+register({
+  name: anthropometryGetByAssessmentToolName,
+  description: anthropometryGetByAssessmentDescription,
+  inputSchema: {
+    assessmentId: { type: "number", description: "Assessment ID (required)" },
+  },
+  zodSchema: anthropometryGetByAssessmentInputSchema,
+  handler: handleAnthropometryGetByAssessment,
+});
+
+register({
+  name: questionnaireGetStructureToolName,
+  description: questionnaireGetStructureDescription,
+  inputSchema: {
+    categoryCode: { type: "string", description: "Filter by a single category code (optional)" },
+    active: { type: "string", description: "Only active items (default true)" },
+  },
+  zodSchema: questionnaireGetStructureInputSchema,
+  handler: handleQuestionnaireGetStructure,
+});
+
+register({
+  name: medicalStudiesGetByAssessmentToolName,
+  description: medicalStudiesGetByAssessmentDescription,
+  inputSchema: {
+    assessmentId: { type: "number", description: "Assessment ID (required)" },
+  },
+  zodSchema: medicalStudiesGetByAssessmentInputSchema,
+  handler: handleMedicalStudiesGetByAssessment,
+});
+
+register({
+  name: medicalStudiesGetByAthleteToolName,
+  description: medicalStudiesGetByAthleteDescription,
+  inputSchema: {
+    athleteId: { type: "number", description: "Athlete ID (required)" },
+    type: { type: "string", description: "Filter by study type (partial match, e.g. 'blood', 'xray')" },
+    limit: { type: "number", description: "Max results (1–100, default 50)" },
+  },
+  zodSchema: medicalStudiesGetByAthleteInputSchema,
+  handler: handleMedicalStudiesGetByAthlete,
 });
 
 export const getTool = (name: string): ToolDef | undefined => tools.get(name);
