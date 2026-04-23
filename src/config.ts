@@ -10,4 +10,5 @@ function getEnv(key: string, fallback: string): string {
 export const config = {
   port: Number(getEnv("PORT", "3002")),
   databaseUrl: getEnv("DATABASE_URL", ""),
+  allowedHosts: getEnv("ALLOWED_HOSTS", "").split(",").filter(Boolean),
 } as const;

@@ -37,7 +37,14 @@ function createMcpServer(): McpServer {
   return server;
 }
 
-const app = createMcpExpressApp();
+// When ALLOWED_HOSTS is set (e.g. in production), pass it to restrict Host header validation.
+// When empty, fall back to binding on 0.0.0.0 without enforcement (suitable for local dev behind a reverse proxy).
+const allowedHosts = config.allowedHosts.length > 0 ? config.allowedHosts : undefined;
+
+const app = createMcpExpressApp({
+  host: "0.0.0.0",
+  ...(allowedHosts ? { allowedHosts } : {}),
+});
 
 // Allow browser/Electron clients (e.g. MCP Inspector) to connect from any origin
 app.use(cors({ origin: true, credentials: true }));
