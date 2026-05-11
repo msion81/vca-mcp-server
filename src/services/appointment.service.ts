@@ -24,10 +24,13 @@ function toResult(row: {
   updatedAt: string | null;
   deletedAt: string | null;
 }): AppointmentSearchResult {
+  const calendarEntryType =
+    row.athleteId != null ? "consultation" : "personal_block";
   return {
     id: row.id,
     userRolesId: row.userRolesId,
     athleteId: row.athleteId,
+    calendarEntryType,
     startDate: row.startDate,
     endDate: row.endDate,
     durationId: row.durationId,

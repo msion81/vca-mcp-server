@@ -55,11 +55,19 @@ export type AppointmentSearchInput = z.infer<typeof appointmentSearchSchema>;
 /** Appointment row type from pulled Drizzle schema. */
 export type AppointmentRow = typeof appointment.$inferSelect;
 
+/**
+ * consultation = turno con un atleta (athleteId presente).
+ * personal_block = bloqueo/reserva del calendario sin atleta (athleteId null), p. ej. tiempo personal o “no atender”.
+ */
+export type AppointmentCalendarEntryType = "consultation" | "personal_block";
+
 /** Shaped appointment for tool response. */
 export interface AppointmentSearchResult {
   id: number;
   userRolesId: number | null;
   athleteId: number | null;
+  /** Derivado de athleteId: consultation si hay atleta; personal_block si athleteId es null. */
+  calendarEntryType: AppointmentCalendarEntryType;
   startDate: string | null;
   endDate: string | null;
   durationId: number | null;

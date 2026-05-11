@@ -9,7 +9,7 @@ import { error } from "../types/responses.js";
 export const toolName = "appointments.search";
 
 export const description =
-  "Search appointments. IMPORTANT: coachId is automatically injected - you will ONLY see appointments for the current coach. Filters: startDate/endDate (YYYY-MM-DD format, for filtering by calendar date - e.g., tomorrow, next week), startTime/endTime (HH:mm format, for filtering by time of day - e.g., morning appointments 09:00-12:00), athleteId, state (confirmed, cancelled, deleted). CRITICAL: Use startDate/endDate for DATES (mañana, esta semana), NOT startTime/endTime. startTime/endTime are for hour ranges within a day. Common use cases: ALL coach appointments → {}; tomorrow → { startDate: \"2026-03-09\", endDate: \"2026-03-09\" }; this week → { startDate: \"2026-03-08\", endDate: \"2026-03-14\" }; morning appointments → { startTime: \"06:00\", endTime: \"12:00\" }; athlete appointments → { athleteId: <id> }. Limit default 50.";
+  "Search calendar rows for the coach (consultations + personal blocks). IMPORTANT: coachId is automatically injected. Each result includes calendarEntryType: \"consultation\" (athleteId set — turno con atleta) or \"personal_block\" (athleteId null — bloqueo/reserva personal en el calendario, NO es una cita con atleta; usar description y horarios, NO llamar athlete.getById). Filters: startDate/endDate (YYYY-MM-DD), startTime/endTime (HH:mm), athleteId, state (confirmed, cancelled, deleted). CRITICAL: Use startDate/endDate for calendar dates (mañana, esta semana), NOT startTime/endTime for whole-day ranges. Limit default 50.";
 
 export const inputSchema = appointmentSearchSchema;
 
