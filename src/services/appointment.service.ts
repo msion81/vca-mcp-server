@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { appointment } from "../db/schema/index.js";
+import { formatInstantInTimeZone, isValidIanaTimeZone } from "../lib/zoned-time-format.js";
 import type {
   AppointmentSearchInput,
   AppointmentSearchResult,
@@ -11,22 +12,29 @@ import { success, error } from "../types/responses.js";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
-function toResult(row: {
-  id: number;
-  userRolesId: number | null;
-  athleteId: number | null;
-  startDate: string | null;
-  endDate: string | null;
-  durationId: number | null;
-  status: string | null;
-  description: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  deletedAt: string | null;
-}): AppointmentSearchResult {
+function toResult(
+  row: {
+    id: number;
+    userRolesId: number | null;
+    athleteId: number | null;
+    startDate: string | null;
+    endDate: string | null;
+    durationId: number | null;
+    status: string | null;
+    description: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    deletedAt: string | null;
+  },
+  displayTimeZone?: string
+): AppointmentSearchResult {
   const calendarEntryType =
     row.athleteId != null ? "consultation" : "personal_block";
-  return {
+  const tzOk =
+    displayTimeZone && isValidIanaTimeZone(displayTimeZone)
+      ? displayTimeZone
+      : undefined;
+  const out: AppointmentSearchResult = {
     id: row.id,
     userRolesId: row.userRolesId,
     athleteId: row.athleteId,
@@ -40,6 +48,15 @@ function toResult(row: {
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
   };
+  if (tzOk) {
+    const sl = row.startDate
+      ? formatInstantInTimeZone(row.startDate, tzOk)
+      : null;
+    const el = row.endDate ? formatInstantInTimeZone(row.endDate, tzOk) : null;
+    if (sl) out.startLocal = sl;
+    if (el) out.endLocal = el;
+  }
+  return out;
 }
 
 /** Normalize "H:mm" or "HH:mm" to "HH:mm:00" for Postgres time comparison. */
@@ -127,7 +144,11 @@ export const appointmentService = {
         .orderBy(desc(appointment.startDate))
         .limit(limit);
 
-      const result = rows.map(toResult);
+      const displayTz =
+        input.clientTimeZone && isValidIanaTimeZone(input.clientTimeZone)
+          ? input.clientTimeZone
+          : undefined;
+      const result = rows.map((r) => toResult(r, displayTz));
       console.log('[appointments.search] Query results:', {
         rowCount: rows.length,
         sampleIds: rows.slice(0, 3).map(r => ({ id: r.id, athleteId: r.athleteId, userRolesId: r.userRolesId, startDate: r.startDate }))

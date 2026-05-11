@@ -9,7 +9,7 @@ import { error } from "../types/responses.js";
 export const toolName = "appointments.search";
 
 export const description =
-  "Search calendar rows for the coach (consultations + personal blocks). IMPORTANT: coachId is automatically injected. Each result includes calendarEntryType: \"consultation\" (athleteId set — turno con atleta) or \"personal_block\" (athleteId null — bloqueo/reserva personal en el calendario, NO es una cita con atleta; usar description y horarios, NO llamar athlete.getById). Filters: startDate/endDate (YYYY-MM-DD), startTime/endTime (HH:mm), athleteId, state (confirmed, cancelled, deleted). CRITICAL: Use startDate/endDate for calendar dates (mañana, esta semana), NOT startTime/endTime for whole-day ranges. Limit default 50.";
+  "Search calendar rows for the coach (consultations + personal blocks). IMPORTANT: coachId is automatically injected. Optional clientTimeZone (IANA, e.g. America/Argentina/Buenos_Aires): when provided (usually injected by the agent from the browser), each row includes startLocal and endLocal { calendarDate: YYYY-MM-DD, timeHm: HH:mm } for displaying wall time in that zone; raw startDate/endDate may be UTC from DB. calendarEntryType: consultation vs personal_block (see module prompts). Filters: startDate/endDate (YYYY-MM-DD), startTime/endTime (HH:mm), athleteId, state. CRITICAL: Use startDate/endDate for calendar dates, NOT startTime/endTime for full-day ranges. Limit default 50.";
 
 export const inputSchema = appointmentSearchSchema;
 

@@ -34,6 +34,8 @@ export const appointmentSearchSchema = z
     state: appointmentStateSchema.optional(),
     coachId: z.number().int().positive().optional(),
     limit: z.number().int().min(1).max(100).optional().default(50),
+    /** IANA zone; cuando es válida, la respuesta incluye startLocal/endLocal en esa zona. */
+    clientTimeZone: z.string().min(1).max(120).optional(),
   })
   .refine(
     (data) => {
@@ -61,6 +63,12 @@ export type AppointmentRow = typeof appointment.$inferSelect;
  */
 export type AppointmentCalendarEntryType = "consultation" | "personal_block";
 
+/** Wall time in clientTimeZone when the search requested it. */
+export interface AppointmentLocalInstantParts {
+  calendarDate: string;
+  timeHm: string;
+}
+
 /** Shaped appointment for tool response. */
 export interface AppointmentSearchResult {
   id: number;
@@ -70,6 +78,10 @@ export interface AppointmentSearchResult {
   calendarEntryType: AppointmentCalendarEntryType;
   startDate: string | null;
   endDate: string | null;
+  /** startDate interpretado en clientTimeZone (si se pidió y es válido). */
+  startLocal?: AppointmentLocalInstantParts;
+  /** endDate interpretado en clientTimeZone (si se pidió y es válido). */
+  endLocal?: AppointmentLocalInstantParts;
   durationId: number | null;
   status: string | null;
   description: string | null;

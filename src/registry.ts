@@ -318,6 +318,11 @@ register({
     athleteId: { type: "number", description: "Filter by athlete ID" },
     state: { type: "string", description: "Filter by state: confirmed, cancelled, deleted" },
     coachId: { type: "number", description: "Filter by coach (user_roles id)" },
+    clientTimeZone: {
+      type: "string",
+      description:
+        "Optional IANA timezone (e.g. America/Argentina/Buenos_Aires). When set, each row includes startLocal/endLocal for wall time in that zone.",
+    },
     limit: { type: "number", description: "Max results (1–100, default 50)" },
   },
   zodSchema: appointmentsSearchInputSchema,
