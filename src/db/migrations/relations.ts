@@ -1,26 +1,71 @@
 import { relations } from "drizzle-orm/relations";
-import { userRoles, appointment, externalCalendar, athlete, appointmentDuration, activityLevel, activityLevelValues, users, roleTypes, athleteByUserProfile, athleteByUserProfileRole, nutritionAssessment, athleteSports, sports, availability, nutritionAssessmentAnswer, questionnaire, questionnaireQuestion, questionnaireType, questionnaireQuestionType, nutritionAssessmentNotesByCategory, questionnaireQuestionsCategory, nutritionIntakesPlan, nutritionIntakeDayPlan, nutritionIntakes, nutritionIntakesType, questionnaireOption, questionnaireQuestionByCategory, food, foodComponent, component, foodEquivalenceDetail, foodEquivalence, foodBrand, userAddress, foodIntake, foodIntakeEquivalence, foodPlan, foodIntakeType, athleteSnapshots, userSocial, nutritionAssessmentMedicalStudies, athleteMedicalStudies, conversations, conversationStatus, messages, mentionNotifications, events, eventParticipants, athleteDayActivity, anthropometry, athletePhotos, nutritionAssessmentPhotos, foodCategoryRelation, foodCategory, gymExercise, gymExerciseMedia, gymRoutine, gymRoutineStage, gymStage, gymSetExercise, gymSetExerciseWeight, gymWeight, gymStageSet, gymSet, colleagues, colleaguesAthleteColaboration, foodCombined, nutritionAssessmentReport, nutritionAssessmentReportComment, gymExerciseCategory, gymExerciseCategoryExercises, gymPlan, foodIntakeCommentDay, foodIntakePhotoDay, foodIntakeStarRatingDay, gymPlanRoutine, gymPlanRoutinePerformance, questionnaireQuestionsCategoryByUserRole, userPreferences, refreshTokens, folders, documents, documentPermissions, folderPermissions, foodPlanDocument, teams, subgroups, userRolesLicenses, documentWhitelist, folderWhitelist, subgroupAthletes, teamAthletes, athleteBlacklist } from "./schema.js";
+import { nutritionAssessment, anthropometryRecording, athlete, userRoles, appointment, externalCalendar, appointmentDuration, questionnaire, activityLevel, activityLevelValues, users, roleTypes, athleteByUserProfile, athleteByUserProfileRole, athleteSports, sports, availability, nutritionAssessmentAnswer, questionnaireQuestion, questionnaireType, questionnaireQuestionType, nutritionAssessmentNotesByCategory, questionnaireQuestionsCategory, nutritionIntakesPlan, nutritionIntakeDayPlan, nutritionIntakes, nutritionIntakesType, questionnaireOption, questionnaireQuestionByCategory, food, foodComponent, component, foodEquivalenceDetail, foodEquivalence, foodBrand, userAddress, foodIntake, foodIntakeEquivalence, foodPlan, foodIntakeType, athleteSnapshots, userSocial, nutritionAssessmentMedicalStudies, athleteMedicalStudies, conversations, conversationStatus, messages, mentionNotifications, events, eventParticipants, athleteDayActivity, anthropometry, athletePhotos, nutritionAssessmentPhotos, foodCategoryRelation, foodCategory, gymExercise, gymExerciseMedia, gymRoutine, gymRoutineStage, gymStage, gymSetExercise, gymSetExerciseWeight, gymWeight, gymStageSet, gymSet, colleagues, colleaguesAthleteColaboration, foodCombined, nutritionAssessmentReport, nutritionAssessmentReportComment, gymExerciseCategory, gymExerciseCategoryExercises, gymPlan, foodIntakeCommentDay, foodIntakePhotoDay, foodIntakeStarRatingDay, gymPlanRoutine, gymPlanRoutinePerformance, questionnaireQuestionsCategoryByUserRole, userPreferences, refreshTokens, folders, documents, documentPermissions, folderPermissions, foodPlanDocument, teams, subgroups, userRolesLicenses, assessmentRecording, documentWhitelist, folderWhitelist, subgroupAthletes, teamAthletes, athleteBlacklist } from "./schema";
 
-export const appointmentRelations = relations(appointment, ({one}) => ({
-	userRole: one(userRoles, {
-		fields: [appointment.userRolesId],
-		references: [userRoles.id]
-	}),
-	externalCalendar: one(externalCalendar, {
-		fields: [appointment.externalCalendarId],
-		references: [externalCalendar.id]
+export const anthropometryRecordingRelations = relations(anthropometryRecording, ({one}) => ({
+	nutritionAssessment: one(nutritionAssessment, {
+		fields: [anthropometryRecording.assessmentId],
+		references: [nutritionAssessment.id]
 	}),
 	athlete: one(athlete, {
-		fields: [appointment.athleteId],
+		fields: [anthropometryRecording.athleteId],
 		references: [athlete.id]
 	}),
-	appointmentDuration: one(appointmentDuration, {
-		fields: [appointment.durationId],
-		references: [appointmentDuration.id]
+	userRole: one(userRoles, {
+		fields: [anthropometryRecording.createdBy],
+		references: [userRoles.id]
 	}),
 }));
 
+export const nutritionAssessmentRelations = relations(nutritionAssessment, ({one, many}) => ({
+	anthropometryRecordings: many(anthropometryRecording),
+	athlete: one(athlete, {
+		fields: [nutritionAssessment.athleteId],
+		references: [athlete.id]
+	}),
+	userRole: one(userRoles, {
+		fields: [nutritionAssessment.userRolesId],
+		references: [userRoles.id]
+	}),
+	nutritionAssessmentAnswers: many(nutritionAssessmentAnswer),
+	nutritionAssessmentNotesByCategories: many(nutritionAssessmentNotesByCategory),
+	nutritionAssessmentMedicalStudies: many(nutritionAssessmentMedicalStudies),
+	athleteDayActivities: many(athleteDayActivity),
+	anthropometries: many(anthropometry),
+	nutritionAssessmentPhotos: many(nutritionAssessmentPhotos),
+	nutritionAssessmentReports: many(nutritionAssessmentReport),
+	assessmentRecordings: many(assessmentRecording),
+}));
+
+export const athleteRelations = relations(athlete, ({many}) => ({
+	anthropometryRecordings: many(anthropometryRecording),
+	appointments: many(appointment),
+	athleteByUserProfiles: many(athleteByUserProfile),
+	athleteByUserProfileRoles: many(athleteByUserProfileRole),
+	nutritionAssessments: many(nutritionAssessment),
+	athleteSports: many(athleteSports),
+	nutritionIntakesPlans: many(nutritionIntakesPlan),
+	foodPlans: many(foodPlan),
+	athleteSnapshots: many(athleteSnapshots),
+	athleteMedicalStudies: many(athleteMedicalStudies),
+	eventParticipants: many(eventParticipants),
+	athleteDayActivities: many(athleteDayActivity),
+	anthropometries: many(anthropometry),
+	athletePhotos: many(athletePhotos),
+	colleaguesAthleteColaborations: many(colleaguesAthleteColaboration),
+	gymPlans: many(gymPlan),
+	foodIntakeCommentDays: many(foodIntakeCommentDay),
+	foodIntakePhotoDays: many(foodIntakePhotoDay),
+	foodIntakeStarRatingDays: many(foodIntakeStarRatingDay),
+	gymPlanRoutinePerformances: many(gymPlanRoutinePerformance),
+	documentWhitelists: many(documentWhitelist),
+	folderWhitelists: many(folderWhitelist),
+	subgroupAthletes: many(subgroupAthletes),
+	teamAthletes: many(teamAthletes),
+	athleteBlacklists: many(athleteBlacklist),
+}));
+
 export const userRolesRelations = relations(userRoles, ({one, many}) => ({
+	anthropometryRecordings: many(anthropometryRecording),
 	appointments: many(appointment),
 	appointmentDurations: many(appointmentDuration),
 	user: one(users, {
@@ -128,6 +173,30 @@ export const userRolesRelations = relations(userRoles, ({one, many}) => ({
 	folders: many(folders),
 	teams: many(teams),
 	userRolesLicenses: many(userRolesLicenses),
+	assessmentRecordings: many(assessmentRecording),
+}));
+
+export const appointmentRelations = relations(appointment, ({one}) => ({
+	userRole: one(userRoles, {
+		fields: [appointment.userRolesId],
+		references: [userRoles.id]
+	}),
+	externalCalendar: one(externalCalendar, {
+		fields: [appointment.externalCalendarId],
+		references: [externalCalendar.id]
+	}),
+	athlete: one(athlete, {
+		fields: [appointment.athleteId],
+		references: [athlete.id]
+	}),
+	appointmentDuration: one(appointmentDuration, {
+		fields: [appointment.durationId],
+		references: [appointmentDuration.id]
+	}),
+	questionnaire: one(questionnaire, {
+		fields: [appointment.questionnaireId],
+		references: [questionnaire.id]
+	}),
 }));
 
 export const externalCalendarRelations = relations(externalCalendar, ({one, many}) => ({
@@ -138,39 +207,26 @@ export const externalCalendarRelations = relations(externalCalendar, ({one, many
 	}),
 }));
 
-export const athleteRelations = relations(athlete, ({many}) => ({
-	appointments: many(appointment),
-	athleteByUserProfiles: many(athleteByUserProfile),
-	athleteByUserProfileRoles: many(athleteByUserProfileRole),
-	nutritionAssessments: many(nutritionAssessment),
-	athleteSports: many(athleteSports),
-	nutritionIntakesPlans: many(nutritionIntakesPlan),
-	foodPlans: many(foodPlan),
-	athleteSnapshots: many(athleteSnapshots),
-	athleteMedicalStudies: many(athleteMedicalStudies),
-	eventParticipants: many(eventParticipants),
-	athleteDayActivities: many(athleteDayActivity),
-	anthropometries: many(anthropometry),
-	athletePhotos: many(athletePhotos),
-	colleaguesAthleteColaborations: many(colleaguesAthleteColaboration),
-	gymPlans: many(gymPlan),
-	foodIntakeCommentDays: many(foodIntakeCommentDay),
-	foodIntakePhotoDays: many(foodIntakePhotoDay),
-	foodIntakeStarRatingDays: many(foodIntakeStarRatingDay),
-	gymPlanRoutinePerformances: many(gymPlanRoutinePerformance),
-	documentWhitelists: many(documentWhitelist),
-	folderWhitelists: many(folderWhitelist),
-	subgroupAthletes: many(subgroupAthletes),
-	teamAthletes: many(teamAthletes),
-	athleteBlacklists: many(athleteBlacklist),
-}));
-
 export const appointmentDurationRelations = relations(appointmentDuration, ({one, many}) => ({
 	appointments: many(appointment),
 	userRole: one(userRoles, {
 		fields: [appointmentDuration.userRolesId],
 		references: [userRoles.id]
 	}),
+}));
+
+export const questionnaireRelations = relations(questionnaire, ({one, many}) => ({
+	appointments: many(appointment),
+	nutritionAssessmentAnswers: many(nutritionAssessmentAnswer),
+	questionnaireType: one(questionnaireType, {
+		fields: [questionnaire.questionnaireTypeId],
+		references: [questionnaireType.id]
+	}),
+	userRole: one(userRoles, {
+		fields: [questionnaire.userRolesId],
+		references: [userRoles.id]
+	}),
+	questionnaireQuestions: many(questionnaireQuestion),
 }));
 
 export const activityLevelValuesRelations = relations(activityLevelValues, ({one}) => ({
@@ -219,24 +275,6 @@ export const athleteByUserProfileRoleRelations = relations(athleteByUserProfileR
 	}),
 }));
 
-export const nutritionAssessmentRelations = relations(nutritionAssessment, ({one, many}) => ({
-	athlete: one(athlete, {
-		fields: [nutritionAssessment.athleteId],
-		references: [athlete.id]
-	}),
-	userRole: one(userRoles, {
-		fields: [nutritionAssessment.userRolesId],
-		references: [userRoles.id]
-	}),
-	nutritionAssessmentAnswers: many(nutritionAssessmentAnswer),
-	nutritionAssessmentNotesByCategories: many(nutritionAssessmentNotesByCategory),
-	nutritionAssessmentMedicalStudies: many(nutritionAssessmentMedicalStudies),
-	athleteDayActivities: many(athleteDayActivity),
-	anthropometries: many(anthropometry),
-	nutritionAssessmentPhotos: many(nutritionAssessmentPhotos),
-	nutritionAssessmentReports: many(nutritionAssessmentReport),
-}));
-
 export const athleteSportsRelations = relations(athleteSports, ({one}) => ({
 	athlete: one(athlete, {
 		fields: [athleteSports.athleteId],
@@ -273,19 +311,6 @@ export const nutritionAssessmentAnswerRelations = relations(nutritionAssessmentA
 		fields: [nutritionAssessmentAnswer.questionnaireQuestionId],
 		references: [questionnaireQuestion.id]
 	}),
-}));
-
-export const questionnaireRelations = relations(questionnaire, ({one, many}) => ({
-	nutritionAssessmentAnswers: many(nutritionAssessmentAnswer),
-	questionnaireType: one(questionnaireType, {
-		fields: [questionnaire.questionnaireTypeId],
-		references: [questionnaireType.id]
-	}),
-	userRole: one(userRoles, {
-		fields: [questionnaire.userRolesId],
-		references: [userRoles.id]
-	}),
-	questionnaireQuestions: many(questionnaireQuestion),
 }));
 
 export const questionnaireQuestionRelations = relations(questionnaireQuestion, ({one, many}) => ({
@@ -1082,6 +1107,17 @@ export const teamsRelations = relations(teams, ({one, many}) => ({
 export const userRolesLicensesRelations = relations(userRolesLicenses, ({one}) => ({
 	userRole: one(userRoles, {
 		fields: [userRolesLicenses.userRoleId],
+		references: [userRoles.id]
+	}),
+}));
+
+export const assessmentRecordingRelations = relations(assessmentRecording, ({one}) => ({
+	nutritionAssessment: one(nutritionAssessment, {
+		fields: [assessmentRecording.assessmentId],
+		references: [nutritionAssessment.id]
+	}),
+	userRole: one(userRoles, {
+		fields: [assessmentRecording.createdBy],
 		references: [userRoles.id]
 	}),
 }));

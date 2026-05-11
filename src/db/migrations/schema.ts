@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, foreignKey, unique, jsonb, boolean, real, index, varchar, json, uuid, primaryKey, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, foreignKey, serial, integer, varchar, text, jsonb, timestamp, unique, boolean, real, index, json, uuid, primaryKey, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const foodPlanStatus = pgEnum("food_plan_status", ['active', 'inactive', 'draft'])
@@ -6,19 +6,38 @@ export const foodplanstatus = pgEnum("foodplanstatus", ['ACTIVE', 'INACTIVE', 'D
 export const gymPlanStatus = pgEnum("gym_plan_status", ['draft', 'active', 'completed', 'archived'])
 
 
-export const users = pgTable("users", {
+export const anthropometryRecording = pgTable("anthropometry_recording", {
 	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	email: text().notNull(),
-	sex: text().default('m').notNull(),
-	birthDate: timestamp("birth_date", { mode: 'string' }).defaultNow(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	assessmentId: integer("assessment_id").notNull(),
+	athleteId: integer("athlete_id").notNull(),
+	recordingKey: varchar("recording_key", { length: 100 }),
+	audioUrl: text("audio_url").notNull(),
+	transcript: text(),
+	metadata: jsonb().default({}),
+	mimeType: varchar("mime_type", { length: 128 }).default('audio/webm'),
+	fileSizeBytes: integer("file_size_bytes"),
+	durationSeconds: integer("duration_seconds"),
+	status: varchar({ length: 50 }).default('pending'),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
-	active: integer().default(0).notNull(),
-	timezone: text().default('America/Argentina/Buenos_Aires').notNull(),
-	phone: text(),
-	logo: text(),
-});
+	createdBy: integer("created_by"),
+}, (table) => [
+	foreignKey({
+			columns: [table.assessmentId],
+			foreignColumns: [nutritionAssessment.id],
+			name: "anthropometry_recording_assessment_id_nutrition_assessment_id_f"
+		}),
+	foreignKey({
+			columns: [table.athleteId],
+			foreignColumns: [athlete.id],
+			name: "anthropometry_recording_athlete_id_athlete_id_fk"
+		}),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "anthropometry_recording_created_by_user_roles_id_fk"
+		}),
+]);
 
 export const appointment = pgTable("appointment", {
 	id: serial().primaryKey().notNull(),
@@ -35,7 +54,8 @@ export const appointment = pgTable("appointment", {
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 	deletedAt: timestamp("deleted_at", { mode: 'string' }),
 	metadata: jsonb().default({}),
-	optCode: text("opt_code").default(''),
+	optCode: text("opt_code").default('),
+	questionnaireId: integer("questionnaire_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.userRolesId],
@@ -57,8 +77,27 @@ export const appointment = pgTable("appointment", {
 			foreignColumns: [appointmentDuration.id],
 			name: "appointment_duration_id_appointment_duration_id_fk"
 		}),
+	foreignKey({
+			columns: [table.questionnaireId],
+			foreignColumns: [questionnaire.id],
+			name: "appointment_questionnaire_id_questionnaire_id_fk"
+		}),
 	unique("appointment_external_calendar_event_id_unique").on(table.externalCalendarEventId),
 ]);
+
+export const users = pgTable("users", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	email: text().notNull(),
+	sex: text().default('m').notNull(),
+	birthDate: timestamp("birth_date", { mode: 'string' }).defaultNow(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	active: integer().default(0).notNull(),
+	timezone: text().default('America/Argentina/Buenos_Aires').notNull(),
+	phone: text(),
+	logo: text(),
+});
 
 export const appointmentDuration = pgTable("appointment_duration", {
 	id: serial().primaryKey().notNull(),
@@ -363,8 +402,8 @@ export const nutritionIntakesPlan = pgTable("nutrition_intakes_plan", {
 	id: serial().primaryKey().notNull(),
 	athleteId: integer("athlete_id"),
 	userRolesId: integer("user_roles_id"),
-	observation: text().default(''),
-	notes: text().default(''),
+	observation: text().default('),
+	notes: text().default('),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 }, (table) => [
@@ -383,10 +422,10 @@ export const nutritionIntakesPlan = pgTable("nutrition_intakes_plan", {
 export const nutritionIntakeDayPlan = pgTable("nutrition_intake_day_plan", {
 	id: serial().primaryKey().notNull(),
 	nutritionIntakesPlanId: integer("nutrition_intakes_plan_id"),
-	days: text().default('').notNull(),
-	description: text().default(''),
-	observation: text().default(''),
-	notes: text().default(''),
+	days: text().default(').notNull(),
+	description: text().default('),
+	observation: text().default('),
+	notes: text().default('),
 	kcal: integer().default(0),
 	protein: integer().default(0),
 	carbohydrate: integer().default(0),
@@ -404,14 +443,14 @@ export const nutritionIntakeDayPlan = pgTable("nutrition_intake_day_plan", {
 export const nutritionIntakes = pgTable("nutrition_intakes", {
 	id: serial().primaryKey().notNull(),
 	nutritionIntakeDayPlanId: integer("nutrition_intake_day_plan_id"),
-	name: text().default('').notNull(),
+	name: text().default(').notNull(),
 	nutritionIntakesTypeId: integer("nutrition_intakes_type_id"),
 	kcal: integer().default(0),
 	protein: integer().default(0),
 	carbohydrate: integer().default(0),
 	fat: integer().default(0),
-	observation: text().default(''),
-	notes: text().default(''),
+	observation: text().default('),
+	notes: text().default('),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 }, (table) => [
@@ -429,9 +468,9 @@ export const nutritionIntakes = pgTable("nutrition_intakes", {
 
 export const nutritionIntakesType = pgTable("nutrition_intakes_type", {
 	id: serial().primaryKey().notNull(),
-	name: text().default('').notNull(),
-	code: text().default('').notNull(),
-	description: text().default(''),
+	name: text().default(').notNull(),
+	code: text().default(').notNull(),
+	description: text().default('),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
@@ -952,11 +991,11 @@ export const athleteDayActivity = pgTable("athlete_day_activity", {
 	userRolesId: integer("user_roles_id"),
 	nutritionAssessmentId: integer("nutrition_assessment_id"),
 	weekDay: integer("week_day").default(0),
-	session: text().default(''),
-	activity: text().default(''),
-	duration: text().default(''),
-	intensity: text().default(''),
-	notes: text().default(''),
+	session: text().default('),
+	activity: text().default('),
+	duration: text().default('),
+	intensity: text().default('),
+	notes: text().default('),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 	sessionTime: timestamp("session_time", { mode: 'string' }).defaultNow(),
@@ -1032,7 +1071,7 @@ export const anthropometry = pgTable("anthropometry", {
 	lengthTrochantericHeight: real("length_trochanteric_height").default(0),
 	lengthAcromialStanding: real("length_acromial_standing").default(0),
 	foldsForearm: real("folds_forearm").default(0),
-	skinfoldCaliperId: text("skinfold_caliper_id").default(''),
+	skinfoldCaliperId: text("skinfold_caliper_id").default('),
 }, (table) => [
 	foreignKey({
 			columns: [table.athleteId],
@@ -1872,6 +1911,30 @@ export const userRolesLicenses = pgTable("user_roles_licenses", {
 			columns: [table.userRoleId],
 			foreignColumns: [userRoles.id],
 			name: "user_roles_licenses_user_role_id_user_roles_id_fk"
+		}),
+]);
+
+export const assessmentRecording = pgTable("assessment_recording", {
+	id: serial().primaryKey().notNull(),
+	assessmentId: integer("assessment_id").notNull(),
+	fileUrl: text("file_url").notNull(),
+	fileSizeBytes: integer("file_size_bytes"),
+	durationSeconds: integer("duration_seconds"),
+	mimeType: varchar("mime_type", { length: 128 }).default('audio/webm'),
+	storageStrategy: varchar("storage_strategy", { length: 50 }),
+	uploadedAt: timestamp("uploaded_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	createdBy: integer("created_by"),
+}, (table) => [
+	foreignKey({
+			columns: [table.assessmentId],
+			foreignColumns: [nutritionAssessment.id],
+			name: "assessment_recording_assessment_id_nutrition_assessment_id_fk"
+		}),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "assessment_recording_created_by_user_roles_id_fk"
 		}),
 ]);
 
