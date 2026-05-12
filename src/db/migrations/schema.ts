@@ -54,7 +54,7 @@ export const appointment = pgTable("appointment", {
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 	deletedAt: timestamp("deleted_at", { mode: 'string' }),
 	metadata: jsonb().default({}),
-	optCode: text("opt_code").default('),
+	optCode: text("opt_code").default(''),
 	questionnaireId: integer("questionnaire_id"),
 }, (table) => [
 	foreignKey({
@@ -402,8 +402,8 @@ export const nutritionIntakesPlan = pgTable("nutrition_intakes_plan", {
 	id: serial().primaryKey().notNull(),
 	athleteId: integer("athlete_id"),
 	userRolesId: integer("user_roles_id"),
-	observation: text().default('),
-	notes: text().default('),
+	observation: text().default(''),
+	notes: text().default(''),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 }, (table) => [
@@ -422,10 +422,10 @@ export const nutritionIntakesPlan = pgTable("nutrition_intakes_plan", {
 export const nutritionIntakeDayPlan = pgTable("nutrition_intake_day_plan", {
 	id: serial().primaryKey().notNull(),
 	nutritionIntakesPlanId: integer("nutrition_intakes_plan_id"),
-	days: text().default(').notNull(),
-	description: text().default('),
-	observation: text().default('),
-	notes: text().default('),
+	days: text().default('').notNull(),
+	description: text().default(''),
+	observation: text().default(''),
+	notes: text().default(''),
 	kcal: integer().default(0),
 	protein: integer().default(0),
 	carbohydrate: integer().default(0),
@@ -443,14 +443,14 @@ export const nutritionIntakeDayPlan = pgTable("nutrition_intake_day_plan", {
 export const nutritionIntakes = pgTable("nutrition_intakes", {
 	id: serial().primaryKey().notNull(),
 	nutritionIntakeDayPlanId: integer("nutrition_intake_day_plan_id"),
-	name: text().default(').notNull(),
+	name: text().default('').notNull(),
 	nutritionIntakesTypeId: integer("nutrition_intakes_type_id"),
 	kcal: integer().default(0),
 	protein: integer().default(0),
 	carbohydrate: integer().default(0),
 	fat: integer().default(0),
-	observation: text().default('),
-	notes: text().default('),
+	observation: text().default(''),
+	notes: text().default(''),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 }, (table) => [
@@ -468,9 +468,9 @@ export const nutritionIntakes = pgTable("nutrition_intakes", {
 
 export const nutritionIntakesType = pgTable("nutrition_intakes_type", {
 	id: serial().primaryKey().notNull(),
-	name: text().default(').notNull(),
-	code: text().default(').notNull(),
-	description: text().default('),
+	name: text().default('').notNull(),
+	code: text().default('').notNull(),
+	description: text().default(''),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
@@ -991,11 +991,11 @@ export const athleteDayActivity = pgTable("athlete_day_activity", {
 	userRolesId: integer("user_roles_id"),
 	nutritionAssessmentId: integer("nutrition_assessment_id"),
 	weekDay: integer("week_day").default(0),
-	session: text().default('),
-	activity: text().default('),
-	duration: text().default('),
-	intensity: text().default('),
-	notes: text().default('),
+	session: text().default(''),
+	activity: text().default(''),
+	duration: text().default(''),
+	intensity: text().default(''),
+	notes: text().default(''),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
 	sessionTime: timestamp("session_time", { mode: 'string' }).defaultNow(),
@@ -1071,7 +1071,7 @@ export const anthropometry = pgTable("anthropometry", {
 	lengthTrochantericHeight: real("length_trochanteric_height").default(0),
 	lengthAcromialStanding: real("length_acromial_standing").default(0),
 	foldsForearm: real("folds_forearm").default(0),
-	skinfoldCaliperId: text("skinfold_caliper_id").default('),
+	skinfoldCaliperId: text("skinfold_caliper_id").default(''),
 }, (table) => [
 	foreignKey({
 			columns: [table.athleteId],
