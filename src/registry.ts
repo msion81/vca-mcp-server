@@ -18,6 +18,12 @@ import {
   handleAthletesSearch,
 } from "./tools/athletes.search.js";
 import {
+  toolName as coachGetTimezoneToolName,
+  description as coachGetTimezoneDescription,
+  inputSchema as coachGetTimezoneInputSchema,
+  handleCoachGetTimezone,
+} from "./tools/coach.getTimezone.js";
+import {
   toolName as assessmentGetByIdToolName,
   description as assessmentGetByIdDescription,
   inputSchema as assessmentGetByIdInputSchema,
@@ -306,6 +312,16 @@ register({
   },
   zodSchema: athletesSearchInputSchema,
   handler: handleAthletesSearch,
+});
+
+register({
+  name: coachGetTimezoneToolName,
+  description: coachGetTimezoneDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach user_roles id (same as MCP coach scope)" },
+  },
+  zodSchema: coachGetTimezoneInputSchema,
+  handler: handleCoachGetTimezone,
 });
 
 register({
