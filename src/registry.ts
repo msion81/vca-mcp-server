@@ -36,6 +36,30 @@ import {
   handleAppointmentsSearch,
 } from "./tools/appointments.search.js";
 import {
+  toolName as appointmentsOverlapsToolName,
+  description as appointmentsOverlapsDescription,
+  inputSchema as appointmentsOverlapsInputSchema,
+  handleAppointmentsOverlaps,
+} from "./tools/appointments.overlaps.js";
+import {
+  toolName as appointmentsListDurationsToolName,
+  description as appointmentsListDurationsDescription,
+  inputSchema as appointmentsListDurationsInputSchema,
+  handleAppointmentsListDurations,
+} from "./tools/appointments.listDurations.js";
+import {
+  toolName as appointmentsCreateToolName,
+  description as appointmentsCreateDescription,
+  inputSchema as appointmentsCreateInputSchema,
+  handleAppointmentsCreate,
+} from "./tools/appointments.create.js";
+import {
+  toolName as appointmentsUpdateToolName,
+  description as appointmentsUpdateDescription,
+  inputSchema as appointmentsUpdateInputSchema,
+  handleAppointmentsUpdate,
+} from "./tools/appointments.update.js";
+import {
   toolName as athleteStatsToolName,
   description as athleteStatsDescription,
   inputSchema as athleteStatsInputSchema,
@@ -274,6 +298,7 @@ register({
   inputSchema: {
     name: { type: "string", description: "Filter by first name (partial match)" },
     lastName: { type: "string", description: "Filter by last name (partial match)" },
+    email: { type: "string", description: "Filter by email substring (case-insensitive partial match)" },
     sport: { type: "string", description: "Filter by sport name or code – only athletes who play this sport" },
     sex: { type: "string", description: "Filter by sex (exact match, e.g. m, f)" },
     age: { type: "number", description: "Filter by exact age in years (integer)" },
@@ -327,6 +352,77 @@ register({
   },
   zodSchema: appointmentsSearchInputSchema,
   handler: handleAppointmentsSearch,
+});
+
+register({
+  name: appointmentsOverlapsToolName,
+  description: appointmentsOverlapsDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach user_roles id (usually injected)" },
+    startUtc: { type: "string", description: "Interval start ISO UTC (same semantics as appointments.create)" },
+    endUtc: { type: "string", description: "Interval end ISO UTC (exclusive-style pairing with create)" },
+    limit: { type: "number", description: "Max overlapping rows (1–50, default 25)" },
+    clientTimeZone: {
+      type: "string",
+      description:
+        "Optional IANA zone so each overlap row includes startLocal/endLocal wall fields.",
+    },
+  },
+  zodSchema: appointmentsOverlapsInputSchema,
+  handler: handleAppointmentsOverlaps,
+});
+
+register({
+  name: appointmentsListDurationsToolName,
+  description: appointmentsListDurationsDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach user_roles id (usually injected)" },
+  },
+  zodSchema: appointmentsListDurationsInputSchema,
+  handler: handleAppointmentsListDurations,
+});
+
+register({
+  name: appointmentsCreateToolName,
+  description: appointmentsCreateDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach user_roles id (usually injected)" },
+    startUtc: { type: "string", description: "Start instant, ISO UTC (Z or +00:00)" },
+    endUtc: { type: "string", description: "End instant, ISO UTC; must be computed by caller" },
+    athleteId: {
+      type: "number",
+      description: "If set → patient appointment; then durationId is required.",
+    },
+    durationId: { type: "number", description: "Required with athleteId; optional for pure time blocks." },
+    description: { type: "string", description: "Optional notes" },
+    clientTimeZone: {
+      type: "string",
+      description:
+        "Optional IANA timezone so overlappingExisting entries include startLocal/endLocal.",
+    },
+  },
+  zodSchema: appointmentsCreateInputSchema,
+  handler: handleAppointmentsCreate,
+});
+
+register({
+  name: appointmentsUpdateToolName,
+  description: appointmentsUpdateDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach user_roles id (usually injected)" },
+    appointmentId: { type: "number", description: "Appointment primary key id" },
+    startUtc: { type: "string", description: "Move slot: ISO UTC start (paired with endUtc)" },
+    endUtc: { type: "string", description: "Move slot: ISO UTC end (paired with startUtc)" },
+    status: { type: "string", description: "confirmed | cancelled" },
+    description: { type: "string", description: "Optional replacement description" },
+    durationId: { type: "number", description: "Optional duration preset id or null to clear" },
+    deleted: {
+      type: "boolean",
+      description: "true soft-delete appointment; false restore if deleted_at was set",
+    },
+  },
+  zodSchema: appointmentsUpdateInputSchema,
+  handler: handleAppointmentsUpdate,
 });
 
 register({

@@ -17,6 +17,8 @@ export type AthleteGetByIdInput = z.infer<typeof athleteGetByIdSchema>;
 export const athleteSearchSchema = z.object({
   name: z.string().optional(),
   lastName: z.string().optional(),
+  /** Partial case-insensitive match on athlete email (ILIKE %value%). */
+  email: z.string().optional(),
   sport: z.string().optional(),
   sex: z.string().optional(),
   age: z.number().int().min(0).optional(),

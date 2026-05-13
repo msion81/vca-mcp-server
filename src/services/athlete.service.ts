@@ -14,6 +14,29 @@ import { getAge } from "./athlete.utils.js";
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 
+/**
+ * If the caller puts a full name in `name` (e.g. "Debora Soledad") and omits `lastName`,
+ * a single-field ILIKE would miss rows where DB has name="Debora" and lastName="Soledad".
+ * When `lastName` is not provided, split on whitespace into first token + remainder.
+ */
+function resolveSearchNameFields(input: {
+  name?: string;
+  lastName?: string;
+}): { name?: string; lastName?: string } {
+  const rawLast = input.lastName?.trim();
+  const rawName = input.name?.trim();
+  if (!rawName) return { name: undefined, lastName: rawLast || undefined };
+  if (rawLast) return { name: rawName, lastName: rawLast };
+
+  const tokens = rawName.split(/\s+/).filter(Boolean);
+  if (tokens.length <= 1) return { name: rawName, lastName: undefined };
+
+  return {
+    name: tokens[0],
+    lastName: tokens.slice(1).join(" "),
+  };
+}
+
 function toAthleteWithSports(
   row: {
     id: number;
@@ -126,28 +149,36 @@ export const athleteService = {
       return error("Database not configured");
     }
     try {
+      const { name: searchName, lastName: searchLastName } =
+        resolveSearchNameFields(input);
+
       // Debug log
       console.log('[athletes.search] Query filters:', {
         name: input.name,
         lastName: input.lastName,
+        resolvedName: searchName,
+        resolvedLastName: searchLastName,
         coachId: input.coachId,
         age: input.age,
         sex: input.sex,
-        namePattern: input.name?.trim() ? `%${input.name.trim()}%` : null
+        namePattern: searchName ? `%${searchName}%` : null,
       });
-      
+
       const conditions = [];
-      if (input.name?.trim()) {
+      if (searchName) {
         // Buscar en AMBOS campos: name O lastName
         conditions.push(
           or(
-            ilike(athlete.name, `%${input.name.trim()}%`),
-            ilike(athlete.lastName, `%${input.name.trim()}%`)
+            ilike(athlete.name, `%${searchName}%`),
+            ilike(athlete.lastName, `%${searchName}%`)
           )
         );
       }
-      if (input.lastName?.trim()) {
-        conditions.push(ilike(athlete.lastName, `%${input.lastName.trim()}%`));
+      if (searchLastName) {
+        conditions.push(ilike(athlete.lastName, `%${searchLastName}%`));
+      }
+      if (input.email?.trim()) {
+        conditions.push(ilike(athlete.email, `%${input.email.trim()}%`));
       }
       if (input.sex?.trim()) {
         conditions.push(ilike(athlete.sex, input.sex.trim()));

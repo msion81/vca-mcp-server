@@ -9,7 +9,7 @@ import { error } from "../types/responses.js";
 export const toolName = "athletes.search";
 
 export const description =
-  "Search athletes. IMPORTANT: coachId is automatically injected - you will ONLY see athletes assigned to the current coach. Filters: name (searches in BOTH first name AND last name, partial match), lastName (surname only, partial match), sport (name or code), sex (exact match), age (exact age in years). Returns athletes with all fields, sports, and computed age. IMPORTANT: The 'name' filter searches in both name and lastName fields automatically. When searching for 'Sufe' or 'Luciano Sufe', just use {name: 'Sufe'}. Use this to find coach's athletes by any part of their name, discipline, sex, or age when you don't have an athlete ID.";
+  "Search athletes. IMPORTANT: coachId is automatically injected - you will ONLY see athletes assigned to the current coach. Filters: name (searches in BOTH first name AND last name, partial match), lastName (surname only, partial match), email (partial case-insensitive match on email address), sport (name or code), sex (exact match), age (exact age in years). Returns athletes with all fields, sports, and computed age. IMPORTANT: The 'name' filter searches in both name and lastName fields automatically. When searching for 'Sufe' or 'Luciano Sufe', just use {name: 'Sufe'}. For an email fragment or domain use {email: 'user@'} or full address. Use this to find coach's athletes by any part of their name, email, discipline, sex, or age when you don't have an athlete ID.";
 
 export const inputSchema = athleteSearchSchema;
 
