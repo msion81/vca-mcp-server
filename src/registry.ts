@@ -302,8 +302,8 @@ register({
   name: athletesSearchToolName,
   description: athletesSearchDescription,
   inputSchema: {
-    name: { type: "string", description: "Filter by first name (partial match)" },
-    lastName: { type: "string", description: "Filter by last name (partial match)" },
+    name: { type: "string", description: "Free-text name search (all tokens ANDed on full display name; accents ignored). Include compound names and surnames in one string unless using lastName too." },
+    lastName: { type: "string", description: "Optional. With name: structured filter (lastName column must match). Alone: match last-name column only." },
     email: { type: "string", description: "Filter by email substring (case-insensitive partial match)" },
     sport: { type: "string", description: "Filter by sport name or code – only athletes who play this sport" },
     sex: { type: "string", description: "Filter by sex (exact match, e.g. m, f)" },

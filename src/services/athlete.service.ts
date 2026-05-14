@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { athlete, athleteSports, sports, athleteByUserProfileRole } from "../db/schema/index.js";
 import type {
@@ -10,32 +10,13 @@ import type {
 import type { ToolResponse } from "../types/responses.js";
 import { success, error } from "../types/responses.js";
 import { getAge } from "./athlete.utils.js";
+import {
+  buildAthleteNameSqlConditions,
+  sqlAthleteDisplayNameLength,
+} from "./athleteSearchName.js";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
-
-/**
- * If the caller puts a full name in `name` (e.g. "Debora Soledad") and omits `lastName`,
- * a single-field ILIKE would miss rows where DB has name="Debora" and lastName="Soledad".
- * When `lastName` is not provided, split on whitespace into first token + remainder.
- */
-function resolveSearchNameFields(input: {
-  name?: string;
-  lastName?: string;
-}): { name?: string; lastName?: string } {
-  const rawLast = input.lastName?.trim();
-  const rawName = input.name?.trim();
-  if (!rawName) return { name: undefined, lastName: rawLast || undefined };
-  if (rawLast) return { name: rawName, lastName: rawLast };
-
-  const tokens = rawName.split(/\s+/).filter(Boolean);
-  if (tokens.length <= 1) return { name: rawName, lastName: undefined };
-
-  return {
-    name: tokens[0],
-    lastName: tokens.slice(1).join(" "),
-  };
-}
 
 function toAthleteWithSports(
   row: {
@@ -149,34 +130,20 @@ export const athleteService = {
       return error("Database not configured");
     }
     try {
-      const { name: searchName, lastName: searchLastName } =
-        resolveSearchNameFields(input);
+      const { conditions: nameConditions, useDisplayNameRanking } =
+        buildAthleteNameSqlConditions(input);
 
-      // Debug log
-      console.log('[athletes.search] Query filters:', {
+      console.log("[athletes.search] Query filters:", {
         name: input.name,
         lastName: input.lastName,
-        resolvedName: searchName,
-        resolvedLastName: searchLastName,
         coachId: input.coachId,
         age: input.age,
         sex: input.sex,
-        namePattern: searchName ? `%${searchName}%` : null,
+        nameConditionCount: nameConditions.length,
+        useDisplayNameRanking,
       });
 
-      const conditions = [];
-      if (searchName) {
-        // Buscar en AMBOS campos: name O lastName
-        conditions.push(
-          or(
-            ilike(athlete.name, `%${searchName}%`),
-            ilike(athlete.lastName, `%${searchName}%`)
-          )
-        );
-      }
-      if (searchLastName) {
-        conditions.push(ilike(athlete.lastName, `%${searchLastName}%`));
-      }
+      const conditions = [...nameConditions];
       if (input.email?.trim()) {
         conditions.push(ilike(athlete.email, `%${input.email.trim()}%`));
       }
@@ -191,6 +158,10 @@ export const athleteService = {
       
       const limit = Math.min(input.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
       const hasSportFilter = input.sport?.trim();
+
+      const orderByRanking = useDisplayNameRanking
+        ? [asc(sqlAthleteDisplayNameLength()), desc(athlete.id)]
+        : [desc(athlete.id)];
 
       type AthleteRow = {
         id: number;
@@ -257,13 +228,13 @@ export const athleteService = {
           raw = await baseQuery
             .innerJoin(athleteByUserProfileRole, eq(athlete.id, athleteByUserProfileRole.athleteId))
             .where(baseWhere)
-            .orderBy(desc(athlete.id))
+            .orderBy(...orderByRanking)
             .limit(limit * 2);
         } else {
           const baseWhere = conditions.length > 0 ? and(...conditions, sportCondition) : sportCondition;
           raw = await baseQuery
             .where(baseWhere)
-            .orderBy(desc(athlete.id))
+            .orderBy(...orderByRanking)
             .limit(limit * 2);
         }
         const seen = new Set<number>();
@@ -314,7 +285,7 @@ export const athleteService = {
             .from(athlete)
             .innerJoin(athleteByUserProfileRole, eq(athlete.id, athleteByUserProfileRole.athleteId))
             .where(baseWhere)
-            .orderBy(desc(athlete.id))
+            .orderBy(...orderByRanking)
             .limit(limit);
         } else {
           console.log('[athletes.search] WARNING: No coach filter applied!');
@@ -341,7 +312,7 @@ export const athleteService = {
             })
             .from(athlete)
             .where(baseWhere)
-            .orderBy(desc(athlete.id))
+            .orderBy(...orderByRanking)
             .limit(limit);
         }
           
