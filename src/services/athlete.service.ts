@@ -133,16 +133,6 @@ export const athleteService = {
       const { conditions: nameConditions, useDisplayNameRanking } =
         buildAthleteNameSqlConditions(input);
 
-      console.log("[athletes.search] Query filters:", {
-        name: input.name,
-        lastName: input.lastName,
-        coachId: input.coachId,
-        age: input.age,
-        sex: input.sex,
-        nameConditionCount: nameConditions.length,
-        useDisplayNameRanking,
-      });
-
       const conditions = [...nameConditions];
       if (input.email?.trim()) {
         conditions.push(ilike(athlete.email, `%${input.email.trim()}%`));
@@ -216,8 +206,6 @@ export const athleteService = {
         // Si hay coachId, agregar INNER JOIN con la tabla de relación
         let raw;
         if (input.coachId != null) {
-          console.log('[athletes.search] Applying coach filter with INNER JOIN (sport filter case):', input.coachId);
-          
           const coachConditions = [
             eq(athleteByUserProfileRole.userRolesId, input.coachId),
             eq(athleteByUserProfileRole.active, 1)
@@ -247,13 +235,8 @@ export const athleteService = {
           }
         }
       } else {
-        // Debug: Log the SQL query
-        console.log('[athletes.search] Executing query with conditions:', conditions.length, 'filters');
-        
         // Si hay coachId, hacemos INNER JOIN con la tabla de relación
         if (input.coachId != null) {
-          console.log('[athletes.search] Applying coach filter with INNER JOIN:', input.coachId);
-          
           const coachConditions = [
             eq(athleteByUserProfileRole.userRolesId, input.coachId),
             eq(athleteByUserProfileRole.active, 1)
@@ -288,7 +271,6 @@ export const athleteService = {
             .orderBy(...orderByRanking)
             .limit(limit);
         } else {
-          console.log('[athletes.search] WARNING: No coach filter applied!');
           const baseWhere = conditions.length > 0 ? and(...conditions) : undefined;
           
           rows = await db
@@ -315,8 +297,6 @@ export const athleteService = {
             .orderBy(...orderByRanking)
             .limit(limit);
         }
-          
-        console.log('[athletes.search] Query returned:', rows.length, 'rows');
       }
 
       const results: AthleteWithSports[] = [];
@@ -354,10 +334,6 @@ export const athleteService = {
           )
         );
       }
-      console.log('[athletes.search] Results:', {
-        count: results.length,
-        athleteIds: results.map(r => r.id)
-      });
       return success(results);
     } catch (err) {
       return error(

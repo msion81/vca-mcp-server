@@ -362,7 +362,7 @@ register({
     clientTimeZone: {
       type: "string",
       description:
-        "Optional IANA timezone (e.g. America/Argentina/Buenos_Aires). When set, each row includes startLocal/endLocal for wall time in that zone.",
+        "Optional IANA timezone (e.g. America/Argentina/Buenos_Aires). Rows include displayRangeLocal (preferred) plus startLocal/endLocal for coach wall time; startDate/endDate are UTC storage — do not use for coach-facing times.",
     },
     limit: { type: "number", description: "Max results (1–100, default 50)" },
   },
@@ -381,7 +381,7 @@ register({
     clientTimeZone: {
       type: "string",
       description:
-        "Optional IANA zone so each overlap row includes startLocal/endLocal wall fields.",
+        "Optional IANA zone; rows include displayRangeLocal (preferred coach wall range) and startLocal/endLocal. When those exist, raw UTC startDate/endDate are omitted from the JSON so they are not read as local times.",
     },
   },
   zodSchema: appointmentsOverlapsInputSchema,
@@ -418,7 +418,7 @@ register({
     clientTimeZone: {
       type: "string",
       description:
-        "Optional IANA timezone so overlappingExisting entries include startLocal/endLocal.",
+        "Optional IANA timezone; overlappingExisting rows include displayRangeLocal and startLocal/endLocal; UTC startDate/endDate omitted from JSON when coach wall range is present.",
     },
   },
   zodSchema: appointmentsCreateInputSchema,

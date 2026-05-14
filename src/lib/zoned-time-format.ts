@@ -17,18 +17,45 @@ export interface ZonedInstantParts {
   timeHm: string;
 }
 
-/** Parse Postgres / ISO-like timestamp; returns null if invalid. */
-export function parseDbInstant(isoLike: string): Date | null {
-  const d = new Date(isoLike);
-  if (Number.isNaN(d.getTime())) return null;
-  return d;
+/** True if the string ends with Z or a numeric UTC offset. */
+function hasExplicitUtcOffsetOrZ(s: string): boolean {
+  return /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s.trim());
+}
+
+/**
+ * Parse values from Postgres `timestamp without time zone` (Drizzle `mode: "string"`).
+ * Those instants are stored as **UTC wall clock** in this codebase (see appointment SQL:
+ * `(column AT TIME ZONE 'UTC')`). A string like `2026-05-14 15:30:00` has **no** offset; ECMAScript
+ * may interpret it as **local** time of the Node process, which breaks coach TZ formatting.
+ * Naive strings are therefore parsed as UTC by appending `Z` after normalizing `T` separator.
+ */
+export function parseDbInstant(isoLike: string | Date): Date | null {
+  if (isoLike instanceof Date) {
+    if (Number.isNaN(isoLike.getTime())) return null;
+    return isoLike;
+  }
+
+  const raw = String(isoLike).trim();
+  if (!raw) return null;
+
+  if (hasExplicitUtcOffsetOrZ(raw)) {
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const withT = raw.includes("T") ? raw : raw.replace(" ", "T");
+  const asUtc = new Date(`${withT}Z`);
+  if (!Number.isNaN(asUtc.getTime())) return asUtc;
+
+  const fallback = new Date(raw);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
 }
 
 export function formatInstantInTimeZone(
-  isoLike: string | null,
+  isoLike: string | Date | null,
   timeZone: string
 ): ZonedInstantParts | null {
-  if (!isoLike) return null;
+  if (isoLike == null) return null;
   const instant = parseDbInstant(isoLike);
   if (!instant) return null;
   const dateParts = new Intl.DateTimeFormat("en-CA", {

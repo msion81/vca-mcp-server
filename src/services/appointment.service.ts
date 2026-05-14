@@ -30,14 +30,57 @@ import type {
   AppointmentUpdateInput,
 } from "../schemas/appointment.js";
 import type { ToolResponse } from "../types/responses.js";
-import { error, success } from "../types/responses.js";
+import { error, isSuccess, success } from "../types/responses.js";
+import { coachService } from "./coach.service.js";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
+/** Clock skew tolerance so a start a few seconds in the past still passes. */
+const PAST_START_SLACK_MS = 60_000;
 
 function normalizeUtcInstant(s: string): string {
   const d = new Date(s.trim());
   return d.toISOString();
+}
+
+/**
+ * DB often stores non-IANA labels. Map only unambiguous legacy values; otherwise return undefined.
+ */
+function coerceProfileTimezoneToIana(raw: string | null | undefined): string | undefined {
+  if (raw == null) return undefined;
+  const t = String(raw).trim();
+  if (!t) return undefined;
+  if (isValidIanaTimeZone(t)) return t;
+  const key = t.toUpperCase().replace(/\s+/g, "_");
+  const legacy: Record<string, string> = {
+    ARGENTINA: "America/Argentina/Buenos_Aires",
+    ART: "America/Argentina/Buenos_Aires",
+    BUENOS_AIRES: "America/Argentina/Buenos_Aires",
+    "AMERICA/BUENOS_AIRES": "America/Argentina/Buenos_Aires",
+  };
+  const mapped = legacy[key];
+  if (mapped && isValidIanaTimeZone(mapped)) return mapped;
+  return undefined;
+}
+
+/**
+ * Prefer request clientTimeZone; else coach profile (users.timezone) with legacy coercion.
+ */
+async function resolveAppointmentDisplayTimeZone(
+  coachId: number,
+  clientTimeZoneInput?: string | null
+): Promise<string | undefined> {
+  const trimmed = clientTimeZoneInput?.trim();
+  if (trimmed && isValidIanaTimeZone(trimmed)) return trimmed;
+
+  const res = await coachService.getTimezoneByUserRoleId(coachId);
+  if (!isSuccess(res)) return undefined;
+
+  const dbRaw = res.data.timezone?.trim();
+  const coerced = coerceProfileTimezoneToIana(dbRaw);
+  if (coerced) return coerced;
+
+  return undefined;
 }
 
 async function coachHasAthlete(
@@ -125,8 +168,38 @@ function toResult(
       : null;
     if (sl) out.startLocal = sl;
     if (el) out.endLocal = el;
+    if (sl && el) {
+      out.displayRangeLocal =
+        sl.calendarDate === el.calendarDate
+          ? `${sl.calendarDate} ${sl.timeHm}–${el.timeHm}`
+          : `${sl.calendarDate} ${sl.timeHm} → ${el.calendarDate} ${el.timeHm}`;
+    }
   }
   return out;
+}
+
+/**
+ * LLMs treat ISO `startDate`/`endDate` as local wall time. When coach-local range exists, drop UTC fields from JSON.
+ */
+function stripUtcFieldsWhenCoachWallPresent(
+  row: AppointmentSearchResult
+): AppointmentSearchResult {
+  if (!row.displayRangeLocal) return row;
+  return {
+    id: row.id,
+    userRolesId: row.userRolesId,
+    athleteId: row.athleteId,
+    calendarEntryType: row.calendarEntryType,
+    displayRangeLocal: row.displayRangeLocal,
+    startLocal: row.startLocal,
+    endLocal: row.endLocal,
+    durationId: row.durationId,
+    status: row.status,
+    description: row.description,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+  } as AppointmentSearchResult;
 }
 
 function toTimeParam(s: string): string {
@@ -207,9 +280,14 @@ export const appointmentService = {
     try {
       const conditions = [];
       const filterTz =
-        input.clientTimeZone && isValidIanaTimeZone(input.clientTimeZone)
-          ? input.clientTimeZone
-          : null;
+        input.coachId != null
+          ? (await resolveAppointmentDisplayTimeZone(
+              input.coachId,
+              input.clientTimeZone
+            )) ?? null
+          : input.clientTimeZone && isValidIanaTimeZone(input.clientTimeZone)
+            ? input.clientTimeZone
+            : null;
 
       if (input.startDate != null) {
         if (filterTz) {
@@ -290,11 +368,9 @@ export const appointmentService = {
         .orderBy(desc(appointment.startDate))
         .limit(limit);
 
-      const displayTz =
-        input.clientTimeZone && isValidIanaTimeZone(input.clientTimeZone)
-          ? input.clientTimeZone
-          : undefined;
-      const result = rows.map((r) => toResult(r, displayTz));
+      const result = rows.map((r) =>
+        stripUtcFieldsWhenCoachWallPresent(toResult(r, filterTz ?? undefined))
+      );
       return success(result);
     } catch (err) {
       return error(
@@ -356,17 +432,19 @@ export const appointmentService = {
     try {
       const startNormalized = normalizeUtcInstant(input.startUtc);
       const endNormalized = normalizeUtcInstant(input.endUtc);
-      const tz =
-        input.clientTimeZone && isValidIanaTimeZone(input.clientTimeZone)
-          ? input.clientTimeZone
-          : undefined;
+      const tz = await resolveAppointmentDisplayTimeZone(
+        input.coachId,
+        input.clientTimeZone
+      );
       const rows = await fetchCoachOverlappingAppointmentRows(
         input.coachId,
         startNormalized,
         endNormalized,
         input.limit ?? 25
       );
-      const result = rows.map((r) => toResult(r, tz));
+      const result = rows.map((r) =>
+        stripUtcFieldsWhenCoachWallPresent(toResult(r, tz))
+      );
       return success(result);
     } catch (err) {
       return error(
@@ -382,12 +460,20 @@ export const appointmentService = {
 
     const startNormalized = normalizeUtcInstant(input.startUtc);
     const endNormalized = normalizeUtcInstant(input.endUtc);
-    const tz =
-      input.clientTimeZone && isValidIanaTimeZone(input.clientTimeZone)
-        ? input.clientTimeZone
-        : undefined;
+    const tz = await resolveAppointmentDisplayTimeZone(
+      input.coachId,
+      input.clientTimeZone
+    );
 
     try {
+      const startMs = Date.parse(startNormalized);
+      if (!Number.isFinite(startMs))
+        return error("Invalid startUtc");
+      if (startMs < Date.now() - PAST_START_SLACK_MS)
+        return error(
+          "Cannot create an appointment in the past; startUtc must be in the future."
+        );
+
       if (input.durationId != null) {
         const okId = await getDurationForCoach(input.coachId, input.durationId);
         if (okId == null)
@@ -405,7 +491,9 @@ export const appointmentService = {
         endNormalized,
         OVERLAP_QUERY_LIMIT_CAP
       );
-      const overlappingExisting = overlappingRows.map((r) => toResult(r, tz));
+      const overlappingExisting = overlappingRows.map((r) =>
+        stripUtcFieldsWhenCoachWallPresent(toResult(r, tz))
+      );
 
       const [created] = await db
         .insert(appointment)
@@ -433,7 +521,7 @@ export const appointmentService = {
         });
 
       return success({
-        appointment: toResult(created, tz),
+        appointment: stripUtcFieldsWhenCoachWallPresent(toResult(created, tz)),
         overlappingExisting,
       });
     } catch (err) {
@@ -486,8 +574,17 @@ export const appointmentService = {
       };
 
       if (input.startUtc != null && input.endUtc != null) {
-        patch.startDate = normalizeUtcInstant(input.startUtc);
-        patch.endDate = normalizeUtcInstant(input.endUtc);
+        const startIso = normalizeUtcInstant(input.startUtc);
+        const endIso = normalizeUtcInstant(input.endUtc);
+        const startMs = Date.parse(startIso);
+        if (!Number.isFinite(startMs))
+          return error("Invalid startUtc");
+        if (startMs < Date.now() - PAST_START_SLACK_MS)
+          return error(
+            "Cannot reschedule an appointment into the past; startUtc must be in the future."
+          );
+        patch.startDate = startIso;
+        patch.endDate = endIso;
       }
       if (input.status != null) patch.status = input.status;
       if (input.description !== undefined)

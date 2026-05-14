@@ -216,12 +216,22 @@ export interface AppointmentSearchResult {
   athleteId: number | null;
   /** Derivado de athleteId: consultation si hay atleta; personal_block si athleteId es null. */
   calendarEntryType: AppointmentCalendarEntryType;
-  startDate: string | null;
-  endDate: string | null;
+  /**
+   * Instantes UTC de almacenamiento. Pueden omitirse en JSON de `appointments.overlaps` y
+   * en `overlappingExisting` de `appointments.create` cuando existe `displayRangeLocal`, para
+   * que el LLM no los confunda con hora local.
+   */
+  startDate?: string | null;
+  endDate?: string | null;
   /** startDate interpretado en clientTimeZone (si se pidió y es válido). */
   startLocal?: AppointmentLocalInstantParts;
   /** endDate interpretado en clientTimeZone (si se pidió y es válido). */
   endLocal?: AppointmentLocalInstantParts;
+  /**
+   * Rango de pared en la zona de visualización (misma que startLocal/endLocal), en una sola cadena
+   * para copiar al coach sin confundir con UTC. Ej. "2026-05-14 12:30–13:15".
+   */
+  displayRangeLocal?: string;
   durationId: number | null;
   status: string | null;
   description: string | null;

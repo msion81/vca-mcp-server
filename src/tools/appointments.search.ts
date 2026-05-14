@@ -9,7 +9,7 @@ import { error } from "../types/responses.js";
 export const toolName = "appointments.search";
 
 export const description =
-  "Search calendar rows for the coach (consultations + personal blocks). IMPORTANT: coachId is automatically injected. Optional clientTimeZone (IANA, e.g. America/Argentina/Buenos_Aires): when provided (usually injected by the agent from the browser), each row includes startLocal/endLocal for wall time AND startDate/endDate/startTime/endTime filters apply to that same zone (so «martes / las 16» matches rows stored as UTC instants). Without clientTimeZone, date/time filters use legacy naive comparisons (prefer passing zone). calendarEntryType: consultation vs personal_block. Limit default 50.";
+  "Search calendar rows for the coach (consultations + personal blocks). IMPORTANT: coachId is automatically injected. Optional clientTimeZone (IANA, e.g. America/Argentina/Buenos_Aires): when resolved (request or coach DB profile), each row includes displayRangeLocal (preferred coach wall range), startLocal/endLocal for wall time, AND date/time filters apply in that zone. startDate/endDate in each row are UTC storage instants — never present those times to the coach as local. calendarEntryType: consultation vs personal_block. Limit default 50.";
 
 export const inputSchema = appointmentSearchSchema;
 
