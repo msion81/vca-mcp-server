@@ -88,6 +88,7 @@ export const appointmentCreateSchema = z
     endUtc: appointmentUtcInstantSchema,
     athleteId: z.number().int().positive().optional(),
     durationId: z.number().int().positive().optional(),
+    /** Free text; for blocks without athleteId this is the calendar-visible reason (e.g. dentist). */
     description: z.string().max(8000).optional(),
     /** Para devolver overlappingExisting con startLocal/endLocal coherentes con el navegador del coach. */
     clientTimeZone: z.string().min(1).max(120).optional(),

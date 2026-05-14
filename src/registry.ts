@@ -410,7 +410,11 @@ register({
       description: "If set → patient appointment; then durationId is required.",
     },
     durationId: { type: "number", description: "Required with athleteId; optional for pure time blocks." },
-    description: { type: "string", description: "Optional notes" },
+    description: {
+      type: "string",
+      description:
+        "Optional. For personal blocks (no athleteId): coach-facing reason shown on calendar (e.g. dentist, trip). For patient appointments: free-form notes.",
+    },
     clientTimeZone: {
       type: "string",
       description:
@@ -430,7 +434,11 @@ register({
     startUtc: { type: "string", description: "Move slot: ISO UTC start (paired with endUtc)" },
     endUtc: { type: "string", description: "Move slot: ISO UTC end (paired with startUtc)" },
     status: { type: "string", description: "confirmed | cancelled" },
-    description: { type: "string", description: "Optional replacement description" },
+    description: {
+      type: "string",
+      description:
+        "Optional replacement text; for personal_block rows, this is the block reason shown on the calendar.",
+    },
     durationId: { type: "number", description: "Optional duration preset id or null to clear" },
     deleted: {
       type: "boolean",
