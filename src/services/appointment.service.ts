@@ -520,6 +520,10 @@ export const appointmentService = {
           deletedAt: appointment.deletedAt,
         });
 
+      if (!created?.id) {
+        return error("Appointment insert returned no row — creation may have silently failed");
+      }
+
       return success({
         appointment: stripUtcFieldsWhenCoachWallPresent(toResult(created, tz)),
         overlappingExisting,
