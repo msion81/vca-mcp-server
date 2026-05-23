@@ -214,7 +214,7 @@ function toTimeParam(s: string): string {
  * naive value as UTC then shift to clientTimeZone so "martes 16:00" matches Argentina wall time.
  */
 function sqlWallClockInClientZone(column: typeof appointment.startDate, tz: string) {
-  return sql`(${column} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}`;
+  return sql`((${column} AT TIME ZONE 'UTC') AT TIME ZONE ${tz})`;
 }
 
 /** Turnos activos (no borrados, no cancelados) cuyo intervalo intersecta ]start,end[ en timestamps persistidos. */
