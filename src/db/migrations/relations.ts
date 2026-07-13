@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { nutritionAssessment, anthropometryRecording, athlete, userRoles, appointment, externalCalendar, appointmentDuration, questionnaire, activityLevel, activityLevelValues, users, roleTypes, athleteByUserProfile, athleteByUserProfileRole, athleteSports, sports, availability, nutritionAssessmentAnswer, questionnaireQuestion, questionnaireType, questionnaireQuestionType, nutritionAssessmentNotesByCategory, questionnaireQuestionsCategory, nutritionIntakesPlan, nutritionIntakeDayPlan, nutritionIntakes, nutritionIntakesType, questionnaireOption, questionnaireQuestionByCategory, food, foodComponent, component, foodEquivalenceDetail, foodEquivalence, foodBrand, userAddress, foodIntake, foodIntakeEquivalence, foodPlan, foodIntakeType, athleteSnapshots, userSocial, nutritionAssessmentMedicalStudies, athleteMedicalStudies, conversations, conversationStatus, messages, mentionNotifications, events, eventParticipants, athleteDayActivity, anthropometry, athletePhotos, nutritionAssessmentPhotos, foodCategoryRelation, foodCategory, gymExercise, gymExerciseMedia, gymRoutine, gymRoutineStage, gymStage, gymSetExercise, gymSetExerciseWeight, gymWeight, gymStageSet, gymSet, colleagues, colleaguesAthleteColaboration, foodCombined, nutritionAssessmentReport, nutritionAssessmentReportComment, gymExerciseCategory, gymExerciseCategoryExercises, gymPlan, foodIntakeCommentDay, foodIntakePhotoDay, foodIntakeStarRatingDay, gymPlanRoutine, gymPlanRoutinePerformance, questionnaireQuestionsCategoryByUserRole, userPreferences, refreshTokens, folders, documents, documentPermissions, folderPermissions, foodPlanDocument, teams, subgroups, userRolesLicenses, assessmentRecording, documentWhitelist, folderWhitelist, subgroupAthletes, teamAthletes, athleteBlacklist } from "./schema.js";
+import { nutritionAssessment, anthropometryRecording, athlete, userRoles, events, eventDocuments, eventParticipants, eventParticipantScheduleStage, eventParticipantDocuments, teams, teamShares, billingIndividualPurchase, appointmentDuration, billingPlan, billingPlanItem, billingSubscription, billingSubscriptionBalance, billingSubscriptionBalanceMovement, billingSubscriptionExtension, saasSubscription, saasPlan, saasPayment, coachPaymentProvider, coachPaymentCredential, coachPayment, eventEditionResults, sports, eventSeries, appointment, externalCalendar, questionnaire, activityLevel, activityLevelValues, users, roleTypes, athleteByUserProfile, athleteByUserProfileRole, athleteSports, availability, nutritionAssessmentAnswer, questionnaireQuestion, questionnaireType, questionnaireQuestionType, nutritionAssessmentNotesByCategory, questionnaireQuestionsCategory, nutritionIntakesPlan, nutritionIntakeDayPlan, nutritionIntakes, nutritionIntakesType, questionnaireOption, questionnaireQuestionByCategory, food, foodComponent, component, foodEquivalenceDetail, foodEquivalence, foodBrand, userAddress, foodPlan, foodIntake, foodIntakeEquivalence, athleteSnapshots, userSocial, foodIntakeType, nutritionAssessmentMedicalStudies, athleteMedicalStudies, conversations, conversationStatus, messages, mentionNotifications, athleteDayActivity, anthropometry, athletePhotos, nutritionAssessmentPhotos, foodCategoryRelation, foodCategory, gymExercise, gymExerciseMedia, gymRoutine, gymRoutineStage, gymStage, gymSetExercise, gymSetExerciseWeight, gymWeight, gymStageSet, gymSet, colleagues, colleaguesAthleteColaboration, foodCombined, nutritionAssessmentReport, nutritionAssessmentReportComment, gymExerciseCategory, gymExerciseCategoryExercises, gymPlan, foodIntakeCommentDay, foodIntakePhotoDay, foodIntakeStarRatingDay, gymPlanRoutine, gymPlanRoutinePerformance, questionnaireQuestionsCategoryByUserRole, userPreferences, refreshTokens, folders, documents, documentPermissions, folderPermissions, foodPlanDocument, subgroups, userRolesLicenses, assessmentRecording, documentWhitelist, folderWhitelist, subgroupAthletes, athleteBlacklist, teamAthletes } from "./schema.js";
 
 export const anthropometryRecordingRelations = relations(anthropometryRecording, ({one}) => ({
 	nutritionAssessment: one(nutritionAssessment, {
@@ -38,6 +38,9 @@ export const nutritionAssessmentRelations = relations(nutritionAssessment, ({one
 
 export const athleteRelations = relations(athlete, ({many}) => ({
 	anthropometryRecordings: many(anthropometryRecording),
+	billingIndividualPurchases: many(billingIndividualPurchase),
+	billingSubscriptions: many(billingSubscription),
+	coachPayments: many(coachPayment),
 	appointments: many(appointment),
 	athleteByUserProfiles: many(athleteByUserProfile),
 	athleteByUserProfileRoles: many(athleteByUserProfileRole),
@@ -60,13 +63,56 @@ export const athleteRelations = relations(athlete, ({many}) => ({
 	documentWhitelists: many(documentWhitelist),
 	folderWhitelists: many(folderWhitelist),
 	subgroupAthletes: many(subgroupAthletes),
-	teamAthletes: many(teamAthletes),
 	athleteBlacklists: many(athleteBlacklist),
+	teamAthletes: many(teamAthletes),
 }));
 
 export const userRolesRelations = relations(userRoles, ({one, many}) => ({
 	anthropometryRecordings: many(anthropometryRecording),
+	eventDocuments_createdBy: many(eventDocuments, {
+		relationName: "eventDocuments_createdBy_userRoles_id"
+	}),
+	eventDocuments_updatedBy: many(eventDocuments, {
+		relationName: "eventDocuments_updatedBy_userRoles_id"
+	}),
+	eventParticipantScheduleStages_createdBy: many(eventParticipantScheduleStage, {
+		relationName: "eventParticipantScheduleStage_createdBy_userRoles_id"
+	}),
+	eventParticipantScheduleStages_updatedBy: many(eventParticipantScheduleStage, {
+		relationName: "eventParticipantScheduleStage_updatedBy_userRoles_id"
+	}),
+	eventParticipantDocuments_createdBy: many(eventParticipantDocuments, {
+		relationName: "eventParticipantDocuments_createdBy_userRoles_id"
+	}),
+	eventParticipantDocuments_updatedBy: many(eventParticipantDocuments, {
+		relationName: "eventParticipantDocuments_updatedBy_userRoles_id"
+	}),
+	teamShares_sharedByUserRolesId: many(teamShares, {
+		relationName: "teamShares_sharedByUserRolesId_userRoles_id"
+	}),
+	teamShares_sharedWithUserRolesId: many(teamShares, {
+		relationName: "teamShares_sharedWithUserRolesId_userRoles_id"
+	}),
+	billingIndividualPurchases: many(billingIndividualPurchase),
+	billingPlans: many(billingPlan),
+	billingSubscriptions: many(billingSubscription),
+	saasSubscriptions: many(saasSubscription),
+	coachPaymentProviders: many(coachPaymentProvider),
+	coachPayments: many(coachPayment),
+	eventEditionResults_createdBy: many(eventEditionResults, {
+		relationName: "eventEditionResults_createdBy_userRoles_id"
+	}),
+	eventEditionResults_updatedBy: many(eventEditionResults, {
+		relationName: "eventEditionResults_updatedBy_userRoles_id"
+	}),
+	eventSeries_createdBy: many(eventSeries, {
+		relationName: "eventSeries_createdBy_userRoles_id"
+	}),
+	eventSeries_updatedBy: many(eventSeries, {
+		relationName: "eventSeries_updatedBy_userRoles_id"
+	}),
 	appointments: many(appointment),
+	externalCalendars: many(externalCalendar),
 	appointmentDurations: many(appointmentDuration),
 	user: one(users, {
 		fields: [userRoles.userId],
@@ -76,7 +122,6 @@ export const userRolesRelations = relations(userRoles, ({one, many}) => ({
 		fields: [userRoles.roleId],
 		references: [roleTypes.id]
 	}),
-	externalCalendars: many(externalCalendar),
 	athleteByUserProfileRoles: many(athleteByUserProfileRole),
 	nutritionAssessments: many(nutritionAssessment),
 	availabilities: many(availability),
@@ -84,15 +129,15 @@ export const userRolesRelations = relations(userRoles, ({one, many}) => ({
 	nutritionIntakesPlans: many(nutritionIntakesPlan),
 	foodEquivalences: many(foodEquivalence),
 	foodPlans: many(foodPlan),
-	conversationStatuses: many(conversationStatus),
-	messages: many(messages),
-	mentionNotifications: many(mentionNotifications),
 	events_createdBy: many(events, {
 		relationName: "events_createdBy_userRoles_id"
 	}),
 	events_updatedBy: many(events, {
 		relationName: "events_updatedBy_userRoles_id"
 	}),
+	conversationStatuses: many(conversationStatus),
+	messages: many(messages),
+	mentionNotifications: many(mentionNotifications),
 	eventParticipants_createdBy: many(eventParticipants, {
 		relationName: "eventParticipants_createdBy_userRoles_id"
 	}),
@@ -174,6 +219,316 @@ export const userRolesRelations = relations(userRoles, ({one, many}) => ({
 	teams: many(teams),
 	userRolesLicenses: many(userRolesLicenses),
 	assessmentRecordings: many(assessmentRecording),
+	teamAthletes: many(teamAthletes),
+}));
+
+export const eventDocumentsRelations = relations(eventDocuments, ({one}) => ({
+	event: one(events, {
+		fields: [eventDocuments.eventId],
+		references: [events.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [eventDocuments.createdBy],
+		references: [userRoles.id],
+		relationName: "eventDocuments_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [eventDocuments.updatedBy],
+		references: [userRoles.id],
+		relationName: "eventDocuments_updatedBy_userRoles_id"
+	}),
+}));
+
+export const eventsRelations = relations(events, ({one, many}) => ({
+	eventDocuments: many(eventDocuments),
+	eventEditionResults: many(eventEditionResults),
+	sport: one(sports, {
+		fields: [events.sportId],
+		references: [sports.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [events.createdBy],
+		references: [userRoles.id],
+		relationName: "events_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [events.updatedBy],
+		references: [userRoles.id],
+		relationName: "events_updatedBy_userRoles_id"
+	}),
+	eventParticipants: many(eventParticipants),
+}));
+
+export const eventParticipantScheduleStageRelations = relations(eventParticipantScheduleStage, ({one}) => ({
+	eventParticipant: one(eventParticipants, {
+		fields: [eventParticipantScheduleStage.eventParticipantId],
+		references: [eventParticipants.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [eventParticipantScheduleStage.createdBy],
+		references: [userRoles.id],
+		relationName: "eventParticipantScheduleStage_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [eventParticipantScheduleStage.updatedBy],
+		references: [userRoles.id],
+		relationName: "eventParticipantScheduleStage_updatedBy_userRoles_id"
+	}),
+}));
+
+export const eventParticipantsRelations = relations(eventParticipants, ({one, many}) => ({
+	eventParticipantScheduleStages: many(eventParticipantScheduleStage),
+	eventParticipantDocuments: many(eventParticipantDocuments),
+	eventEditionResults: many(eventEditionResults),
+	event: one(events, {
+		fields: [eventParticipants.eventId],
+		references: [events.id]
+	}),
+	athlete: one(athlete, {
+		fields: [eventParticipants.athleteId],
+		references: [athlete.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [eventParticipants.createdBy],
+		references: [userRoles.id],
+		relationName: "eventParticipants_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [eventParticipants.updatedBy],
+		references: [userRoles.id],
+		relationName: "eventParticipants_updatedBy_userRoles_id"
+	}),
+}));
+
+export const eventParticipantDocumentsRelations = relations(eventParticipantDocuments, ({one}) => ({
+	eventParticipant: one(eventParticipants, {
+		fields: [eventParticipantDocuments.eventParticipantId],
+		references: [eventParticipants.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [eventParticipantDocuments.createdBy],
+		references: [userRoles.id],
+		relationName: "eventParticipantDocuments_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [eventParticipantDocuments.updatedBy],
+		references: [userRoles.id],
+		relationName: "eventParticipantDocuments_updatedBy_userRoles_id"
+	}),
+}));
+
+export const teamSharesRelations = relations(teamShares, ({one}) => ({
+	team: one(teams, {
+		fields: [teamShares.teamId],
+		references: [teams.id]
+	}),
+	userRole_sharedByUserRolesId: one(userRoles, {
+		fields: [teamShares.sharedByUserRolesId],
+		references: [userRoles.id],
+		relationName: "teamShares_sharedByUserRolesId_userRoles_id"
+	}),
+	userRole_sharedWithUserRolesId: one(userRoles, {
+		fields: [teamShares.sharedWithUserRolesId],
+		references: [userRoles.id],
+		relationName: "teamShares_sharedWithUserRolesId_userRoles_id"
+	}),
+}));
+
+export const teamsRelations = relations(teams, ({one, many}) => ({
+	teamShares: many(teamShares),
+	subgroups: many(subgroups),
+	userRole: one(userRoles, {
+		fields: [teams.userRolesId],
+		references: [userRoles.id]
+	}),
+	teamAthletes: many(teamAthletes),
+}));
+
+export const billingIndividualPurchaseRelations = relations(billingIndividualPurchase, ({one}) => ({
+	athlete: one(athlete, {
+		fields: [billingIndividualPurchase.athleteId],
+		references: [athlete.id]
+	}),
+	userRole: one(userRoles, {
+		fields: [billingIndividualPurchase.userRolesId],
+		references: [userRoles.id]
+	}),
+	appointmentDuration: one(appointmentDuration, {
+		fields: [billingIndividualPurchase.appointmentDurationId],
+		references: [appointmentDuration.id]
+	}),
+}));
+
+export const appointmentDurationRelations = relations(appointmentDuration, ({one, many}) => ({
+	billingIndividualPurchases: many(billingIndividualPurchase),
+	billingPlanItems: many(billingPlanItem),
+	billingSubscriptionBalances: many(billingSubscriptionBalance),
+	appointments: many(appointment),
+	userRole: one(userRoles, {
+		fields: [appointmentDuration.userRolesId],
+		references: [userRoles.id]
+	}),
+}));
+
+export const billingPlanRelations = relations(billingPlan, ({one, many}) => ({
+	userRole: one(userRoles, {
+		fields: [billingPlan.userRolesId],
+		references: [userRoles.id]
+	}),
+	billingPlanItems: many(billingPlanItem),
+	billingSubscriptions: many(billingSubscription),
+}));
+
+export const billingPlanItemRelations = relations(billingPlanItem, ({one}) => ({
+	billingPlan: one(billingPlan, {
+		fields: [billingPlanItem.planId],
+		references: [billingPlan.id]
+	}),
+	appointmentDuration: one(appointmentDuration, {
+		fields: [billingPlanItem.appointmentDurationId],
+		references: [appointmentDuration.id]
+	}),
+}));
+
+export const billingSubscriptionBalanceRelations = relations(billingSubscriptionBalance, ({one, many}) => ({
+	billingSubscription: one(billingSubscription, {
+		fields: [billingSubscriptionBalance.subscriptionId],
+		references: [billingSubscription.id]
+	}),
+	appointmentDuration: one(appointmentDuration, {
+		fields: [billingSubscriptionBalance.appointmentDurationId],
+		references: [appointmentDuration.id]
+	}),
+	billingSubscriptionBalanceMovements: many(billingSubscriptionBalanceMovement),
+}));
+
+export const billingSubscriptionRelations = relations(billingSubscription, ({one, many}) => ({
+	billingSubscriptionBalances: many(billingSubscriptionBalance),
+	billingSubscriptionExtensions: many(billingSubscriptionExtension),
+	athlete: one(athlete, {
+		fields: [billingSubscription.athleteId],
+		references: [athlete.id]
+	}),
+	billingPlan: one(billingPlan, {
+		fields: [billingSubscription.planId],
+		references: [billingPlan.id]
+	}),
+	userRole: one(userRoles, {
+		fields: [billingSubscription.userRolesId],
+		references: [userRoles.id]
+	}),
+	coachPayments: many(coachPayment),
+}));
+
+export const billingSubscriptionBalanceMovementRelations = relations(billingSubscriptionBalanceMovement, ({one}) => ({
+	billingSubscriptionBalance: one(billingSubscriptionBalance, {
+		fields: [billingSubscriptionBalanceMovement.subscriptionBalanceId],
+		references: [billingSubscriptionBalance.id]
+	}),
+}));
+
+export const billingSubscriptionExtensionRelations = relations(billingSubscriptionExtension, ({one}) => ({
+	billingSubscription: one(billingSubscription, {
+		fields: [billingSubscriptionExtension.subscriptionId],
+		references: [billingSubscription.id]
+	}),
+}));
+
+export const saasSubscriptionRelations = relations(saasSubscription, ({one, many}) => ({
+	userRole: one(userRoles, {
+		fields: [saasSubscription.userRolesId],
+		references: [userRoles.id]
+	}),
+	saasPlan: one(saasPlan, {
+		fields: [saasSubscription.planId],
+		references: [saasPlan.id]
+	}),
+	saasPayments: many(saasPayment),
+}));
+
+export const saasPlanRelations = relations(saasPlan, ({many}) => ({
+	saasSubscriptions: many(saasSubscription),
+}));
+
+export const saasPaymentRelations = relations(saasPayment, ({one}) => ({
+	saasSubscription: one(saasSubscription, {
+		fields: [saasPayment.subscriptionId],
+		references: [saasSubscription.id]
+	}),
+}));
+
+export const coachPaymentProviderRelations = relations(coachPaymentProvider, ({one, many}) => ({
+	userRole: one(userRoles, {
+		fields: [coachPaymentProvider.userRolesId],
+		references: [userRoles.id]
+	}),
+	coachPaymentCredentials: many(coachPaymentCredential),
+}));
+
+export const coachPaymentCredentialRelations = relations(coachPaymentCredential, ({one}) => ({
+	coachPaymentProvider: one(coachPaymentProvider, {
+		fields: [coachPaymentCredential.providerConnectionId],
+		references: [coachPaymentProvider.id]
+	}),
+}));
+
+export const coachPaymentRelations = relations(coachPayment, ({one}) => ({
+	userRole: one(userRoles, {
+		fields: [coachPayment.userRolesId],
+		references: [userRoles.id]
+	}),
+	athlete: one(athlete, {
+		fields: [coachPayment.athleteId],
+		references: [athlete.id]
+	}),
+	billingSubscription: one(billingSubscription, {
+		fields: [coachPayment.subscriptionId],
+		references: [billingSubscription.id]
+	}),
+}));
+
+export const eventEditionResultsRelations = relations(eventEditionResults, ({one}) => ({
+	event: one(events, {
+		fields: [eventEditionResults.editionId],
+		references: [events.id]
+	}),
+	eventParticipant: one(eventParticipants, {
+		fields: [eventEditionResults.participantId],
+		references: [eventParticipants.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [eventEditionResults.createdBy],
+		references: [userRoles.id],
+		relationName: "eventEditionResults_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [eventEditionResults.updatedBy],
+		references: [userRoles.id],
+		relationName: "eventEditionResults_updatedBy_userRoles_id"
+	}),
+}));
+
+export const eventSeriesRelations = relations(eventSeries, ({one}) => ({
+	sport: one(sports, {
+		fields: [eventSeries.sportId],
+		references: [sports.id]
+	}),
+	userRole_createdBy: one(userRoles, {
+		fields: [eventSeries.createdBy],
+		references: [userRoles.id],
+		relationName: "eventSeries_createdBy_userRoles_id"
+	}),
+	userRole_updatedBy: one(userRoles, {
+		fields: [eventSeries.updatedBy],
+		references: [userRoles.id],
+		relationName: "eventSeries_updatedBy_userRoles_id"
+	}),
+}));
+
+export const sportsRelations = relations(sports, ({many}) => ({
+	eventSeries: many(eventSeries),
+	athleteSports: many(athleteSports),
+	events: many(events),
 }));
 
 export const appointmentRelations = relations(appointment, ({one}) => ({
@@ -203,14 +558,6 @@ export const externalCalendarRelations = relations(externalCalendar, ({one, many
 	appointments: many(appointment),
 	userRole: one(userRoles, {
 		fields: [externalCalendar.userRolesId],
-		references: [userRoles.id]
-	}),
-}));
-
-export const appointmentDurationRelations = relations(appointmentDuration, ({one, many}) => ({
-	appointments: many(appointment),
-	userRole: one(userRoles, {
-		fields: [appointmentDuration.userRolesId],
 		references: [userRoles.id]
 	}),
 }));
@@ -284,11 +631,6 @@ export const athleteSportsRelations = relations(athleteSports, ({one}) => ({
 		fields: [athleteSports.sportId],
 		references: [sports.id]
 	}),
-}));
-
-export const sportsRelations = relations(sports, ({many}) => ({
-	athleteSports: many(athleteSports),
-	events: many(events),
 }));
 
 export const availabilityRelations = relations(availability, ({one}) => ({
@@ -467,6 +809,19 @@ export const userAddressRelations = relations(userAddress, ({one}) => ({
 	}),
 }));
 
+export const foodPlanRelations = relations(foodPlan, ({one, many}) => ({
+	userRole: one(userRoles, {
+		fields: [foodPlan.userRolesId],
+		references: [userRoles.id]
+	}),
+	athlete: one(athlete, {
+		fields: [foodPlan.athleteId],
+		references: [athlete.id]
+	}),
+	foodIntakes: many(foodIntake),
+	foodPlanDocuments: many(foodPlanDocument),
+}));
+
 export const foodIntakeEquivalenceRelations = relations(foodIntakeEquivalence, ({one}) => ({
 	foodIntake: one(foodIntake, {
 		fields: [foodIntakeEquivalence.foodIntakeId],
@@ -493,23 +848,6 @@ export const foodIntakeRelations = relations(foodIntake, ({one, many}) => ({
 	foodIntakeStarRatingDays: many(foodIntakeStarRatingDay),
 }));
 
-export const foodPlanRelations = relations(foodPlan, ({one, many}) => ({
-	foodIntakes: many(foodIntake),
-	userRole: one(userRoles, {
-		fields: [foodPlan.userRolesId],
-		references: [userRoles.id]
-	}),
-	athlete: one(athlete, {
-		fields: [foodPlan.athleteId],
-		references: [athlete.id]
-	}),
-	foodPlanDocuments: many(foodPlanDocument),
-}));
-
-export const foodIntakeTypeRelations = relations(foodIntakeType, ({many}) => ({
-	foodIntakes: many(foodIntake),
-}));
-
 export const athleteSnapshotsRelations = relations(athleteSnapshots, ({one}) => ({
 	athlete: one(athlete, {
 		fields: [athleteSnapshots.athleteId],
@@ -522,6 +860,10 @@ export const userSocialRelations = relations(userSocial, ({one}) => ({
 		fields: [userSocial.userId],
 		references: [users.id]
 	}),
+}));
+
+export const foodIntakeTypeRelations = relations(foodIntakeType, ({many}) => ({
+	foodIntakes: many(foodIntake),
 }));
 
 export const nutritionAssessmentMedicalStudiesRelations = relations(nutritionAssessmentMedicalStudies, ({one}) => ({
@@ -588,45 +930,6 @@ export const mentionNotificationsRelations = relations(mentionNotifications, ({o
 	message: one(messages, {
 		fields: [mentionNotifications.messageId],
 		references: [messages.id]
-	}),
-}));
-
-export const eventsRelations = relations(events, ({one, many}) => ({
-	sport: one(sports, {
-		fields: [events.sportId],
-		references: [sports.id]
-	}),
-	userRole_createdBy: one(userRoles, {
-		fields: [events.createdBy],
-		references: [userRoles.id],
-		relationName: "events_createdBy_userRoles_id"
-	}),
-	userRole_updatedBy: one(userRoles, {
-		fields: [events.updatedBy],
-		references: [userRoles.id],
-		relationName: "events_updatedBy_userRoles_id"
-	}),
-	eventParticipants: many(eventParticipants),
-}));
-
-export const eventParticipantsRelations = relations(eventParticipants, ({one}) => ({
-	event: one(events, {
-		fields: [eventParticipants.eventId],
-		references: [events.id]
-	}),
-	athlete: one(athlete, {
-		fields: [eventParticipants.athleteId],
-		references: [athlete.id]
-	}),
-	userRole_createdBy: one(userRoles, {
-		fields: [eventParticipants.createdBy],
-		references: [userRoles.id],
-		relationName: "eventParticipants_createdBy_userRoles_id"
-	}),
-	userRole_updatedBy: one(userRoles, {
-		fields: [eventParticipants.updatedBy],
-		references: [userRoles.id],
-		relationName: "eventParticipants_updatedBy_userRoles_id"
 	}),
 }));
 
@@ -1095,15 +1398,6 @@ export const subgroupsRelations = relations(subgroups, ({one, many}) => ({
 	subgroupAthletes: many(subgroupAthletes),
 }));
 
-export const teamsRelations = relations(teams, ({one, many}) => ({
-	subgroups: many(subgroups),
-	userRole: one(userRoles, {
-		fields: [teams.userRolesId],
-		references: [userRoles.id]
-	}),
-	teamAthletes: many(teamAthletes),
-}));
-
 export const userRolesLicensesRelations = relations(userRolesLicenses, ({one}) => ({
 	userRole: one(userRoles, {
 		fields: [userRolesLicenses.userRoleId],
@@ -1155,6 +1449,13 @@ export const subgroupAthletesRelations = relations(subgroupAthletes, ({one}) => 
 	}),
 }));
 
+export const athleteBlacklistRelations = relations(athleteBlacklist, ({one}) => ({
+	athlete: one(athlete, {
+		fields: [athleteBlacklist.athleteId],
+		references: [athlete.id]
+	}),
+}));
+
 export const teamAthletesRelations = relations(teamAthletes, ({one}) => ({
 	team: one(teams, {
 		fields: [teamAthletes.teamId],
@@ -1164,11 +1465,8 @@ export const teamAthletesRelations = relations(teamAthletes, ({one}) => ({
 		fields: [teamAthletes.athleteId],
 		references: [athlete.id]
 	}),
-}));
-
-export const athleteBlacklistRelations = relations(athleteBlacklist, ({one}) => ({
-	athlete: one(athlete, {
-		fields: [athleteBlacklist.athleteId],
-		references: [athlete.id]
+	userRole: one(userRoles, {
+		fields: [teamAthletes.addedByUserRolesId],
+		references: [userRoles.id]
 	}),
 }));

@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { events, sports } from "../db/schema/index.js";
-import type { EventsSearchInput } from "../schemas/events.js";
+import type { EventsGetEditionsInput, EventEditionResult, EventsSearchInput } from "../schemas/events.js";
 import type { EventSearchResult } from "../schemas/events.js";
 import type { ToolResponse } from "../types/responses.js";
 import { success, error } from "../types/responses.js";
@@ -97,6 +97,48 @@ export const eventsService = {
     } catch (err) {
       return error(
         err instanceof Error ? err.message : "Failed to search events"
+      );
+    }
+  },
+
+  getEditions: async (
+    input: EventsGetEditionsInput
+  ): Promise<ToolResponse<EventEditionResult[]>> => {
+    if (!db) {
+      return error("Database not configured");
+    }
+    try {
+      const rows = await db
+        .select({
+          id: events.id,
+          title: events.title,
+          year: events.year,
+          date: events.date,
+          time: events.time,
+          location: events.location,
+          isCompetition: events.isCompetition,
+          sportName: sports.name,
+        })
+        .from(events)
+        .leftJoin(sports, eq(events.sportId, sports.id))
+        .where(and(eq(events.seriesId, input.seriesId), isNull(events.deletedAt)))
+        .orderBy(desc(events.year), desc(events.date));
+
+      const result: EventEditionResult[] = rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        year: row.year,
+        date: row.date,
+        time: row.time,
+        location: row.location,
+        isCompetition: row.isCompetition,
+        sportName: row.sportName ?? null,
+      }));
+
+      return success(result);
+    } catch (err) {
+      return error(
+        err instanceof Error ? err.message : "Failed to get event editions"
       );
     }
   },

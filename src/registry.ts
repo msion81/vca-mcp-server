@@ -257,6 +257,36 @@ import {
   inputSchema as foodSearchByNameInputSchema,
   handleFoodSearchByName,
 } from "./tools/food.searchByName.js";
+import {
+  toolName as billingPlansSearchToolName,
+  description as billingPlansSearchDescription,
+  inputSchema as billingPlansSearchInputSchema,
+  handleBillingPlansSearch,
+} from "./tools/billingPlans.search.js";
+import {
+  toolName as billingSubscriptionsSearchToolName,
+  description as billingSubscriptionsSearchDescription,
+  inputSchema as billingSubscriptionsSearchInputSchema,
+  handleBillingSubscriptionsSearch,
+} from "./tools/billingSubscriptions.search.js";
+import {
+  toolName as eventsGetEditionsToolName,
+  description as eventsGetEditionsDescription,
+  inputSchema as eventsGetEditionsInputSchema,
+  handleEventsGetEditions,
+} from "./tools/events.getEditions.js";
+import {
+  toolName as eventDocumentsGetByEventToolName,
+  description as eventDocumentsGetByEventDescription,
+  inputSchema as eventDocumentsGetByEventInputSchema,
+  handleEventDocumentsGetByEvent,
+} from "./tools/eventDocuments.getByEvent.js";
+import {
+  toolName as eventParticipantDocumentsGetByAthleteToolName,
+  description as eventParticipantDocumentsGetByAthleteDescription,
+  inputSchema as eventParticipantDocumentsGetByAthleteInputSchema,
+  handleEventParticipantDocumentsGetByAthlete,
+} from "./tools/eventParticipantDocuments.getByAthlete.js";
 import type { z } from "zod";
 
 export interface ToolDef {
@@ -857,6 +887,61 @@ register({
   inputSchema: {},
   zodSchema: intakeTypeListInputSchema,
   handler: handleIntakeTypeList,
+});
+
+register({
+  name: billingPlansSearchToolName,
+  description: billingPlansSearchDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    limit: { type: "number", description: "Max results (1-100, default 50)" },
+  },
+  zodSchema: billingPlansSearchInputSchema,
+  handler: handleBillingPlansSearch,
+});
+
+register({
+  name: billingSubscriptionsSearchToolName,
+  description: billingSubscriptionsSearchDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    athleteId: { type: "number", description: "Optional athlete ID filter" },
+    status: { type: "string", description: "Optional status filter (e.g. ACTIVE)" },
+    limit: { type: "number", description: "Max results (1-100, default 50)" },
+  },
+  zodSchema: billingSubscriptionsSearchInputSchema,
+  handler: handleBillingSubscriptionsSearch,
+});
+
+register({
+  name: eventsGetEditionsToolName,
+  description: eventsGetEditionsDescription,
+  inputSchema: {
+    seriesId: { type: "number", description: "Event series ID (required)" },
+  },
+  zodSchema: eventsGetEditionsInputSchema,
+  handler: handleEventsGetEditions,
+});
+
+register({
+  name: eventDocumentsGetByEventToolName,
+  description: eventDocumentsGetByEventDescription,
+  inputSchema: {
+    eventId: { type: "number", description: "Event/edition ID (required)" },
+  },
+  zodSchema: eventDocumentsGetByEventInputSchema,
+  handler: handleEventDocumentsGetByEvent,
+});
+
+register({
+  name: eventParticipantDocumentsGetByAthleteToolName,
+  description: eventParticipantDocumentsGetByAthleteDescription,
+  inputSchema: {
+    athleteId: { type: "number", description: "Athlete ID (required)" },
+    eventId: { type: "number", description: "Optional event/edition ID filter" },
+  },
+  zodSchema: eventParticipantDocumentsGetByAthleteInputSchema,
+  handler: handleEventParticipantDocumentsGetByAthlete,
 });
 
 export const getTool = (name: string): ToolDef | undefined => tools.get(name);

@@ -16,6 +16,25 @@ export const eventsSearchSchema = z.object({
 
 export type EventsSearchInput = z.infer<typeof eventsSearchSchema>;
 
+/** Input schema for events.getEditions: list editions (events rows) of a series. */
+export const eventsGetEditionsSchema = z.object({
+  seriesId: z.number().int().positive(),
+});
+
+export type EventsGetEditionsInput = z.infer<typeof eventsGetEditionsSchema>;
+
+/** Shaped edition (an events row that belongs to a series). */
+export interface EventEditionResult {
+  id: number;
+  title: string;
+  year: number | null;
+  date: string | null;
+  time: string;
+  location: string;
+  isCompetition: boolean;
+  sportName: string | null;
+}
+
 /** Event row type from pulled Drizzle schema. */
 export type EventRow = typeof events.$inferSelect;
 

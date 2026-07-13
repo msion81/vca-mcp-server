@@ -58,10 +58,7 @@ async function getOwnedFoodPlan(
   return row ?? null;
 }
 
-async function getOwnedIntake(
-  coachId: number,
-  foodIntakeId: number
-): Promise<typeof foodIntake.$inferSelect | null> {
+async function getOwnedIntake(coachId: number, foodIntakeId: number) {
   if (!db) return null;
   const rows = await db
     .select({

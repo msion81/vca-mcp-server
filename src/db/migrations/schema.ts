@@ -1,4 +1,4 @@
-import { pgTable, foreignKey, serial, integer, varchar, text, jsonb, timestamp, unique, boolean, real, index, json, uuid, primaryKey, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, foreignKey, serial, integer, varchar, text, jsonb, timestamp, uniqueIndex, index, unique, uuid, boolean, real, json, primaryKey, pgEnum } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const foodPlanStatus = pgEnum("food_plan_status", ['active', 'inactive', 'draft'])
@@ -39,6 +39,506 @@ export const anthropometryRecording = pgTable("anthropometry_recording", {
 		}),
 ]);
 
+export const eventDocuments = pgTable("event_documents", {
+	id: serial().primaryKey().notNull(),
+	eventId: integer("event_id").notNull(),
+	documentType: text("document_type").notNull(),
+	title: text(),
+	fileUrl: text("file_url").notNull(),
+	mimeType: text("mime_type").notNull(),
+	sizeBytes: integer("size_bytes"),
+	createdBy: integer("created_by").notNull(),
+	updatedBy: integer("updated_by"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.eventId],
+			foreignColumns: [events.id],
+			name: "event_documents_event_id_events_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "event_documents_created_by_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.updatedBy],
+			foreignColumns: [userRoles.id],
+			name: "event_documents_updated_by_user_roles_id_fk"
+		}),
+]);
+
+export const eventParticipantScheduleStage = pgTable("event_participant_schedule_stage", {
+	id: serial().primaryKey().notNull(),
+	eventParticipantId: integer("event_participant_id").notNull(),
+	sortOrder: integer("sort_order").notNull(),
+	label: text().notNull(),
+	scheduledAt: timestamp("scheduled_at", { withTimezone: true, mode: 'string' }).notNull(),
+	createdBy: integer("created_by").notNull(),
+	updatedBy: integer("updated_by"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+	uniqueIndex("event_participant_schedule_stage_participant_sort_unique").using("btree", table.eventParticipantId.asc().nullsLast().op("int4_ops"), table.sortOrder.asc().nullsLast().op("int4_ops")).where(sql`(deleted_at IS NULL)`),
+	foreignKey({
+			columns: [table.eventParticipantId],
+			foreignColumns: [eventParticipants.id],
+			name: "event_participant_schedule_stage_event_participant_id_event_par"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "event_participant_schedule_stage_created_by_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.updatedBy],
+			foreignColumns: [userRoles.id],
+			name: "event_participant_schedule_stage_updated_by_user_roles_id_fk"
+		}),
+]);
+
+export const eventParticipantDocuments = pgTable("event_participant_documents", {
+	id: serial().primaryKey().notNull(),
+	eventParticipantId: integer("event_participant_id").notNull(),
+	documentType: text("document_type").notNull(),
+	title: text(),
+	fileUrl: text("file_url").notNull(),
+	mimeType: text("mime_type").notNull(),
+	sizeBytes: integer("size_bytes"),
+	createdBy: integer("created_by").notNull(),
+	updatedBy: integer("updated_by"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+	metadata: jsonb().default({}),
+}, (table) => [
+	foreignKey({
+			columns: [table.eventParticipantId],
+			foreignColumns: [eventParticipants.id],
+			name: "event_participant_documents_event_participant_id_event_particip"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "event_participant_documents_created_by_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.updatedBy],
+			foreignColumns: [userRoles.id],
+			name: "event_participant_documents_updated_by_user_roles_id_fk"
+		}),
+]);
+
+export const teamShares = pgTable("team_shares", {
+	id: serial().primaryKey().notNull(),
+	teamId: uuid("team_id").notNull(),
+	sharedByUserRolesId: integer("shared_by_user_roles_id").notNull(),
+	sharedWithUserRolesId: integer("shared_with_user_roles_id").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("team_shares_shared_with_idx").using("btree", table.sharedWithUserRolesId.asc().nullsLast().op("int4_ops")),
+	index("team_shares_team_id_idx").using("btree", table.teamId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.teamId],
+			foreignColumns: [teams.id],
+			name: "team_shares_team_id_teams_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.sharedByUserRolesId],
+			foreignColumns: [userRoles.id],
+			name: "team_shares_shared_by_user_roles_id_user_roles_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.sharedWithUserRolesId],
+			foreignColumns: [userRoles.id],
+			name: "team_shares_shared_with_user_roles_id_user_roles_id_fk"
+		}).onDelete("cascade"),
+	unique("team_shares_unique").on(table.teamId, table.sharedWithUserRolesId),
+]);
+
+export const billingIndividualPurchase = pgTable("billing_individual_purchase", {
+	id: serial().primaryKey().notNull(),
+	athleteId: integer("athlete_id").notNull(),
+	userRolesId: integer("user_roles_id").notNull(),
+	appointmentDurationId: integer("appointment_duration_id").notNull(),
+	quantity: integer().notNull(),
+	purchaseDate: timestamp("purchase_date", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.athleteId],
+			foreignColumns: [athlete.id],
+			name: "billing_individual_purchase_athlete_id_athlete_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "billing_individual_purchase_user_roles_id_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.appointmentDurationId],
+			foreignColumns: [appointmentDuration.id],
+			name: "billing_individual_purchase_appointment_duration_id_appointment"
+		}),
+]);
+
+export const billingPlan = pgTable("billing_plan", {
+	id: serial().primaryKey().notNull(),
+	userRolesId: integer("user_roles_id").notNull(),
+	name: text().notNull(),
+	description: text(),
+	price: integer().notNull(),
+	durationDays: integer("duration_days").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "billing_plan_user_roles_id_user_roles_id_fk"
+		}),
+]);
+
+export const billingPlanItem = pgTable("billing_plan_item", {
+	id: serial().primaryKey().notNull(),
+	planId: integer("plan_id").notNull(),
+	appointmentDurationId: integer("appointment_duration_id").notNull(),
+	quantity: integer().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.planId],
+			foreignColumns: [billingPlan.id],
+			name: "billing_plan_item_plan_id_billing_plan_id_fk"
+		}),
+	foreignKey({
+			columns: [table.appointmentDurationId],
+			foreignColumns: [appointmentDuration.id],
+			name: "billing_plan_item_appointment_duration_id_appointment_duration_"
+		}),
+]);
+
+export const billingSubscriptionBalance = pgTable("billing_subscription_balance", {
+	id: serial().primaryKey().notNull(),
+	subscriptionId: integer("subscription_id").notNull(),
+	appointmentDurationId: integer("appointment_duration_id").notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.subscriptionId],
+			foreignColumns: [billingSubscription.id],
+			name: "billing_subscription_balance_subscription_id_billing_subscripti"
+		}),
+	foreignKey({
+			columns: [table.appointmentDurationId],
+			foreignColumns: [appointmentDuration.id],
+			name: "billing_subscription_balance_appointment_duration_id_appointmen"
+		}),
+]);
+
+export const billingSubscriptionBalanceMovement = pgTable("billing_subscription_balance_movement", {
+	id: serial().primaryKey().notNull(),
+	subscriptionBalanceId: integer("subscription_balance_id").notNull(),
+	quantity: integer().notNull(),
+	movementType: text("movement_type").notNull(),
+	referenceType: text("reference_type"),
+	referenceId: integer("reference_id"),
+	notes: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.subscriptionBalanceId],
+			foreignColumns: [billingSubscriptionBalance.id],
+			name: "billing_subscription_balance_movement_subscription_balance_id_b"
+		}),
+]);
+
+export const billingSubscriptionExtension = pgTable("billing_subscription_extension", {
+	id: serial().primaryKey().notNull(),
+	subscriptionId: integer("subscription_id").notNull(),
+	days: integer().notNull(),
+	reason: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.subscriptionId],
+			foreignColumns: [billingSubscription.id],
+			name: "billing_subscription_extension_subscription_id_billing_subscrip"
+		}),
+]);
+
+export const billingSubscription = pgTable("billing_subscription", {
+	id: serial().primaryKey().notNull(),
+	athleteId: integer("athlete_id").notNull(),
+	planId: integer("plan_id").notNull(),
+	userRolesId: integer("user_roles_id").notNull(),
+	startDate: timestamp("start_date", { mode: 'string' }).notNull(),
+	originalEndDate: timestamp("original_end_date", { mode: 'string' }).notNull(),
+	endDate: timestamp("end_date", { mode: 'string' }).notNull(),
+	status: text().default('ACTIVE').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	paymentMethod: text("payment_method"),
+}, (table) => [
+	foreignKey({
+			columns: [table.athleteId],
+			foreignColumns: [athlete.id],
+			name: "billing_subscription_athlete_id_athlete_id_fk"
+		}),
+	foreignKey({
+			columns: [table.planId],
+			foreignColumns: [billingPlan.id],
+			name: "billing_subscription_plan_id_billing_plan_id_fk"
+		}),
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "billing_subscription_user_roles_id_user_roles_id_fk"
+		}),
+]);
+
+export const webhookLog = pgTable("webhook_log", {
+	id: serial().primaryKey().notNull(),
+	provider: text().notNull(),
+	event: text(),
+	resourceId: text("resource_id"),
+	receivedAt: timestamp("received_at", { mode: 'string' }).defaultNow(),
+	processed: boolean().default(false).notNull(),
+	payload: jsonb(),
+});
+
+export const saasSubscription = pgTable("saas_subscription", {
+	id: serial().primaryKey().notNull(),
+	userRolesId: integer("user_roles_id").notNull(),
+	planId: integer("plan_id").notNull(),
+	status: text().default('PendingPayment').notNull(),
+	startsAt: timestamp("starts_at", { mode: 'string' }),
+	expiresAt: timestamp("expires_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "saas_subscription_user_roles_id_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.planId],
+			foreignColumns: [saasPlan.id],
+			name: "saas_subscription_plan_id_saas_plan_id_fk"
+		}),
+]);
+
+export const saasPayment = pgTable("saas_payment", {
+	id: serial().primaryKey().notNull(),
+	subscriptionId: integer("subscription_id").notNull(),
+	provider: text().default('mercadopago').notNull(),
+	providerPaymentId: text("provider_payment_id"),
+	preferenceId: text("preference_id"),
+	status: text(),
+	amount: integer(),
+	currency: text(),
+	approvedAt: timestamp("approved_at", { mode: 'string' }),
+	rawResponse: jsonb("raw_response"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.subscriptionId],
+			foreignColumns: [saasSubscription.id],
+			name: "saas_payment_subscription_id_saas_subscription_id_fk"
+		}),
+	unique("saas_payment_provider_payment_id_unique").on(table.providerPaymentId),
+]);
+
+export const saasPlan = pgTable("saas_plan", {
+	id: serial().primaryKey().notNull(),
+	code: text().notNull(),
+	name: text().notNull(),
+	description: text(),
+	price: integer().notNull(),
+	currency: text().default('ARS').notNull(),
+	durationDays: integer("duration_days").notNull(),
+	active: boolean().default(true).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+	unique("saas_plan_code_unique").on(table.code),
+]);
+
+export const coachPaymentProvider = pgTable("coach_payment_provider", {
+	id: serial().primaryKey().notNull(),
+	userRolesId: integer("user_roles_id").notNull(),
+	provider: text().default('mercadopago').notNull(),
+	providerUserId: text("provider_user_id"),
+	status: text().default('connected').notNull(),
+	connectedAt: timestamp("connected_at", { mode: 'string' }).defaultNow(),
+	disconnectedAt: timestamp("disconnected_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "coach_payment_provider_user_roles_id_user_roles_id_fk"
+		}),
+	unique("coach_payment_provider_user_roles_id_provider_unique").on(table.userRolesId, table.provider),
+]);
+
+export const coachPaymentCredential = pgTable("coach_payment_credential", {
+	id: serial().primaryKey().notNull(),
+	providerConnectionId: integer("provider_connection_id").notNull(),
+	accessTokenEnc: text("access_token_enc").notNull(),
+	refreshTokenEnc: text("refresh_token_enc"),
+	expiresAt: timestamp("expires_at", { mode: 'string' }),
+	lastRefresh: timestamp("last_refresh", { mode: 'string' }),
+	scope: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.providerConnectionId],
+			foreignColumns: [coachPaymentProvider.id],
+			name: "coach_payment_credential_provider_connection_id_coach_payment_p"
+		}),
+	unique("coach_payment_credential_provider_connection_id_unique").on(table.providerConnectionId),
+]);
+
+export const coachPayment = pgTable("coach_payment", {
+	id: serial().primaryKey().notNull(),
+	userRolesId: integer("user_roles_id").notNull(),
+	athleteId: integer("athlete_id").notNull(),
+	subscriptionId: integer("subscription_id"),
+	provider: text().default('mercadopago').notNull(),
+	concept: text().notNull(),
+	preferenceId: text("preference_id"),
+	initPoint: text("init_point"),
+	providerPaymentId: text("provider_payment_id"),
+	status: text().default('pending').notNull(),
+	amount: integer().notNull(),
+	currency: text().default('ARS').notNull(),
+	approvedAt: timestamp("approved_at", { mode: 'string' }),
+	rawResponse: jsonb("raw_response"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "coach_payment_user_roles_id_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.athleteId],
+			foreignColumns: [athlete.id],
+			name: "coach_payment_athlete_id_athlete_id_fk"
+		}),
+	foreignKey({
+			columns: [table.subscriptionId],
+			foreignColumns: [billingSubscription.id],
+			name: "coach_payment_subscription_id_billing_subscription_id_fk"
+		}),
+	unique("coach_payment_provider_payment_id_unique").on(table.providerPaymentId),
+]);
+
+export const eventEditionResults = pgTable("event_edition_results", {
+	id: serial().primaryKey().notNull(),
+	editionId: integer("edition_id").notNull(),
+	participantId: integer("participant_id").notNull(),
+	resultType: text("result_type").notNull(),
+	payload: jsonb().default({}).notNull(),
+	createdBy: integer("created_by").notNull(),
+	updatedBy: integer("updated_by"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.editionId],
+			foreignColumns: [events.id],
+			name: "event_edition_results_edition_id_events_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.participantId],
+			foreignColumns: [eventParticipants.id],
+			name: "event_edition_results_participant_id_event_participants_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "event_edition_results_created_by_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.updatedBy],
+			foreignColumns: [userRoles.id],
+			name: "event_edition_results_updated_by_user_roles_id_fk"
+		}),
+]);
+
+export const eventSeries = pgTable("event_series", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	sportId: integer("sport_id").notNull(),
+	location: text().notNull(),
+	resultType: text("result_type").notNull(),
+	resultUnit: text("result_unit"),
+	createdBy: integer("created_by").notNull(),
+	updatedBy: integer("updated_by"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.sportId],
+			foreignColumns: [sports.id],
+			name: "event_series_sport_id_sports_id_fk"
+		}),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "event_series_created_by_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.updatedBy],
+			foreignColumns: [userRoles.id],
+			name: "event_series_updated_by_user_roles_id_fk"
+		}),
+]);
+
+export const agentEventOutbox = pgTable("agent_event_outbox", {
+	id: serial().primaryKey().notNull(),
+	eventId: uuid("event_id").defaultRandom().notNull(),
+	type: text().notNull(),
+	coachId: text("coach_id").notNull(),
+	actorType: text("actor_type").default('system').notNull(),
+	actorId: text("actor_id").notNull(),
+	entities: jsonb().default([]).notNull(),
+	payload: jsonb().notNull(),
+	occurredAt: timestamp("occurred_at", { mode: 'string' }).defaultNow().notNull(),
+	status: text().default('pending').notNull(),
+	attempts: integer().default(0).notNull(),
+	lastError: text("last_error"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	sentAt: timestamp("sent_at", { mode: 'string' }),
+}, (table) => [
+	unique("agent_event_outbox_event_id_unique").on(table.eventId),
+]);
+
+export const users = pgTable("users", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	email: text().notNull(),
+	sex: text().default('m').notNull(),
+	birthDate: timestamp("birth_date", { mode: 'string' }).defaultNow(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	active: integer().default(0).notNull(),
+	timezone: text().default('America/Argentina/Buenos_Aires').notNull(),
+	phone: text(),
+	logo: text(),
+});
+
 export const appointment = pgTable("appointment", {
 	id: serial().primaryKey().notNull(),
 	userRolesId: integer("user_roles_id"),
@@ -56,6 +556,8 @@ export const appointment = pgTable("appointment", {
 	metadata: jsonb().default({}),
 	optCode: text("opt_code").default(''),
 	questionnaireId: integer("questionnaire_id"),
+	isBlocker: boolean("is_blocker").default(false).notNull(),
+	source: text().default('app').notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.userRolesId],
@@ -85,19 +587,21 @@ export const appointment = pgTable("appointment", {
 	unique("appointment_external_calendar_event_id_unique").on(table.externalCalendarEventId),
 ]);
 
-export const users = pgTable("users", {
+export const externalCalendar = pgTable("external_calendar", {
 	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	email: text().notNull(),
-	sex: text().default('m').notNull(),
-	birthDate: timestamp("birth_date", { mode: 'string' }).defaultNow(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
-	active: integer().default(0).notNull(),
-	timezone: text().default('America/Argentina/Buenos_Aires').notNull(),
-	phone: text(),
-	logo: text(),
-});
+	userRolesId: integer("user_roles_id"),
+	calendarId: text("calendar_id"),
+	name: text(),
+	active: integer().default(1).notNull(),
+	sendNotifications: boolean("send_notifications").default(false).notNull(),
+	googleRefreshToken: text("google_refresh_token"),
+}, (table) => [
+	foreignKey({
+			columns: [table.userRolesId],
+			foreignColumns: [userRoles.id],
+			name: "external_calendar_user_roles_id_user_roles_id_fk"
+		}),
+]);
 
 export const appointmentDuration = pgTable("appointment_duration", {
 	id: serial().primaryKey().notNull(),
@@ -193,21 +697,6 @@ export const athleteByUserProfile = pgTable("athlete_by_user_profile", {
 			columns: [table.userId],
 			foreignColumns: [users.id],
 			name: "athlete_by_user_profile_user_id_users_id_fk"
-		}),
-]);
-
-export const externalCalendar = pgTable("external_calendar", {
-	id: serial().primaryKey().notNull(),
-	userRolesId: integer("user_roles_id"),
-	calendarId: text("calendar_id"),
-	name: text(),
-	active: integer().default(1).notNull(),
-	sendNotifications: boolean("send_notifications").default(false).notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.userRolesId],
-			foreignColumns: [userRoles.id],
-			name: "external_calendar_user_roles_id_user_roles_id_fk"
 		}),
 ]);
 
@@ -684,50 +1173,6 @@ export const foodBrand = pgTable("food_brand", {
 	updatedBy: integer("updated_by"),
 });
 
-export const foodIntakeEquivalence = pgTable("food_intake_equivalence", {
-	id: serial().primaryKey().notNull(),
-	foodIntakeId: integer("food_intake_id").notNull(),
-	foodEquivalenceId: integer("food_equivalence_id").notNull(),
-	order: real().default(0),
-}, (table) => [
-	foreignKey({
-			columns: [table.foodIntakeId],
-			foreignColumns: [foodIntake.id],
-			name: "food_intake_equivalence_food_intake_id_food_intake_id_fk"
-		}),
-	foreignKey({
-			columns: [table.foodEquivalenceId],
-			foreignColumns: [foodEquivalence.id],
-			name: "food_intake_equivalence_food_equivalence_id_food_equivalence_id"
-		}),
-]);
-
-export const foodIntake = pgTable("food_intake", {
-	id: serial().primaryKey().notNull(),
-	name: text(),
-	foodPlanId: integer("food_plan_id").notNull(),
-	foodIntakeTypeId: integer("food_intake_type_id").notNull(),
-	description: text(),
-	notes: text(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
-	createdBy: integer("created_by"),
-	updatedBy: integer("updated_by"),
-	weekDay: text("week_day"),
-	order: real().default(0),
-}, (table) => [
-	foreignKey({
-			columns: [table.foodPlanId],
-			foreignColumns: [foodPlan.id],
-			name: "food_intake_food_plan_id_food_plan_id_fk"
-		}),
-	foreignKey({
-			columns: [table.foodIntakeTypeId],
-			foreignColumns: [foodIntakeType.id],
-			name: "food_intake_food_intake_type_id_food_intake_type_id_fk"
-		}),
-]);
-
 export const processedData = pgTable("processed_data", {
 	id: serial().primaryKey().notNull(),
 	dataType: varchar("data_type"),
@@ -768,6 +1213,26 @@ export const foodPlan = pgTable("food_plan", {
 		}),
 ]);
 
+export const foodIntakeEquivalence = pgTable("food_intake_equivalence", {
+	id: serial().primaryKey().notNull(),
+	foodIntakeId: integer("food_intake_id").notNull(),
+	foodEquivalenceId: integer("food_equivalence_id").notNull(),
+	order: real().default(0),
+	displayName: text("display_name"),
+	nutrients: jsonb().default({}),
+}, (table) => [
+	foreignKey({
+			columns: [table.foodIntakeId],
+			foreignColumns: [foodIntake.id],
+			name: "food_intake_equivalence_food_intake_id_food_intake_id_fk"
+		}),
+	foreignKey({
+			columns: [table.foodEquivalenceId],
+			foreignColumns: [foodEquivalence.id],
+			name: "food_intake_equivalence_food_equivalence_id_food_equivalence_id"
+		}),
+]);
+
 export const athleteSnapshots = pgTable("athlete_snapshots", {
 	id: serial().primaryKey().notNull(),
 	athleteId: integer("athlete_id"),
@@ -799,6 +1264,34 @@ export const userSocial = pgTable("user_social", {
 			columns: [table.userId],
 			foreignColumns: [users.id],
 			name: "user_social_user_id_users_id_fk"
+		}),
+]);
+
+export const foodIntake = pgTable("food_intake", {
+	id: serial().primaryKey().notNull(),
+	name: text(),
+	foodPlanId: integer("food_plan_id").notNull(),
+	foodIntakeTypeId: integer("food_intake_type_id").notNull(),
+	description: text(),
+	notes: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	createdBy: integer("created_by"),
+	updatedBy: integer("updated_by"),
+	weekDay: text("week_day"),
+	order: real().default(0),
+	buildedBy: text("builded_by").default('bricks'),
+	intakeSoul: jsonb("intake_soul"),
+}, (table) => [
+	foreignKey({
+			columns: [table.foodPlanId],
+			foreignColumns: [foodPlan.id],
+			name: "food_intake_food_plan_id_food_plan_id_fk"
+		}),
+	foreignKey({
+			columns: [table.foodIntakeTypeId],
+			foreignColumns: [foodIntakeType.id],
+			name: "food_intake_food_intake_type_id_food_intake_type_id_fk"
 		}),
 ]);
 
@@ -841,6 +1334,48 @@ export const athleteMedicalStudies = pgTable("athlete_medical_studies", {
 			columns: [table.athleteId],
 			foreignColumns: [athlete.id],
 			name: "athlete_medical_studies_athlete_id_athlete_id_fk"
+		}),
+]);
+
+export const events = pgTable("events", {
+	id: serial().primaryKey().notNull(),
+	title: text().notNull(),
+	eventType: integer("event_type").default(1).notNull(),
+	sportId: integer("sport_id").notNull(),
+	date: timestamp({ mode: 'string' }).notNull(),
+	time: text().notNull(),
+	timezone: text().notNull(),
+	isCompetition: boolean("is_competition").default(false).notNull(),
+	isPublic: boolean("is_public").default(true).notNull(),
+	isSearchable: boolean("is_searchable").default(true).notNull(),
+	isOfficial: boolean("is_official").default(false).notNull(),
+	basedOn: integer("based_on").default(1).notNull(),
+	timeBasedValue: text("time_based_value"),
+	distanceBasedValue: real("distance_based_value"),
+	distanceBasedUnit: text("distance_based_unit"),
+	location: text().notNull(),
+	createdBy: integer("created_by").notNull(),
+	updatedBy: integer("updated_by"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
+	deletedAt: timestamp("deleted_at", { mode: 'string' }),
+	seriesId: integer("series_id"),
+	year: integer(),
+}, (table) => [
+	foreignKey({
+			columns: [table.sportId],
+			foreignColumns: [sports.id],
+			name: "events_sport_id_sports_id_fk"
+		}),
+	foreignKey({
+			columns: [table.createdBy],
+			foreignColumns: [userRoles.id],
+			name: "events_created_by_user_roles_id_fk"
+		}),
+	foreignKey({
+			columns: [table.updatedBy],
+			foreignColumns: [userRoles.id],
+			name: "events_updated_by_user_roles_id_fk"
 		}),
 ]);
 
@@ -909,46 +1444,6 @@ export const mentionNotifications = pgTable("mention_notifications", {
 			columns: [table.messageId],
 			foreignColumns: [messages.id],
 			name: "mention_notifications_message_id_messages_id_fk"
-		}),
-]);
-
-export const events = pgTable("events", {
-	id: serial().primaryKey().notNull(),
-	title: text().notNull(),
-	eventType: integer("event_type").default(1).notNull(),
-	sportId: integer("sport_id").notNull(),
-	date: timestamp({ mode: 'string' }).notNull(),
-	time: text().notNull(),
-	timezone: text().notNull(),
-	isCompetition: boolean("is_competition").default(false).notNull(),
-	isPublic: boolean("is_public").default(true).notNull(),
-	isSearchable: boolean("is_searchable").default(true).notNull(),
-	isOfficial: boolean("is_official").default(false).notNull(),
-	basedOn: integer("based_on").default(1).notNull(),
-	timeBasedValue: text("time_based_value"),
-	distanceBasedValue: real("distance_based_value"),
-	distanceBasedUnit: text("distance_based_unit"),
-	location: text().notNull(),
-	createdBy: integer("created_by").notNull(),
-	updatedBy: integer("updated_by"),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	updatedAt: timestamp("updated_at", { precision: 3, mode: 'string' }),
-	deletedAt: timestamp("deleted_at", { mode: 'string' }),
-}, (table) => [
-	foreignKey({
-			columns: [table.sportId],
-			foreignColumns: [sports.id],
-			name: "events_sport_id_sports_id_fk"
-		}),
-	foreignKey({
-			columns: [table.createdBy],
-			foreignColumns: [userRoles.id],
-			name: "events_created_by_user_roles_id_fk"
-		}),
-	foreignKey({
-			columns: [table.updatedBy],
-			foreignColumns: [userRoles.id],
-			name: "events_updated_by_user_roles_id_fk"
 		}),
 ]);
 
@@ -1992,26 +2487,6 @@ export const subgroupAthletes = pgTable("subgroup_athletes", {
 	primaryKey({ columns: [table.subgroupId, table.athleteId], name: "subgroup_athletes_subgroup_id_athlete_id_pk"}),
 ]);
 
-export const teamAthletes = pgTable("team_athletes", {
-	teamId: uuid("team_id").notNull(),
-	athleteId: integer("athlete_id").notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
-}, (table) => [
-	index("team_athletes_athlete_id_idx").using("btree", table.athleteId.asc().nullsLast().op("int4_ops")),
-	index("team_athletes_team_id_idx").using("btree", table.teamId.asc().nullsLast().op("uuid_ops")),
-	foreignKey({
-			columns: [table.teamId],
-			foreignColumns: [teams.id],
-			name: "team_athletes_team_id_teams_id_fk"
-		}).onDelete("cascade"),
-	foreignKey({
-			columns: [table.athleteId],
-			foreignColumns: [athlete.id],
-			name: "team_athletes_athlete_id_athlete_id_fk"
-		}).onDelete("cascade"),
-	primaryKey({ columns: [table.teamId, table.athleteId], name: "team_athletes_team_id_athlete_id_pk"}),
-]);
-
 export const athleteBlacklist = pgTable("athlete_blacklist", {
 	athleteId: integer("athlete_id").notNull(),
 	resourceType: varchar("resource_type", { length: 32 }).notNull(),
@@ -2026,4 +2501,30 @@ export const athleteBlacklist = pgTable("athlete_blacklist", {
 			name: "athlete_blacklist_athlete_id_athlete_id_fk"
 		}).onDelete("cascade"),
 	primaryKey({ columns: [table.athleteId, table.resourceType, table.resourceId], name: "athlete_blacklist_athlete_id_resource_type_resource_id_pk"}),
+]);
+
+export const teamAthletes = pgTable("team_athletes", {
+	teamId: uuid("team_id").notNull(),
+	athleteId: integer("athlete_id").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	addedByUserRolesId: integer("added_by_user_roles_id"),
+}, (table) => [
+	index("team_athletes_athlete_id_idx").using("btree", table.athleteId.asc().nullsLast().op("int4_ops")),
+	index("team_athletes_team_id_idx").using("btree", table.teamId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.teamId],
+			foreignColumns: [teams.id],
+			name: "team_athletes_team_id_teams_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.athleteId],
+			foreignColumns: [athlete.id],
+			name: "team_athletes_athlete_id_athlete_id_fk"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.addedByUserRolesId],
+			foreignColumns: [userRoles.id],
+			name: "team_athletes_added_by_user_roles_id_user_roles_id_fk"
+		}).onDelete("set null"),
+	primaryKey({ columns: [table.teamId, table.athleteId], name: "team_athletes_team_id_athlete_id_pk"}),
 ]);
