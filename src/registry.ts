@@ -96,6 +96,12 @@ import {
   handleQuestionnaireGetStructure,
 } from "./tools/questionnaire.getStructure.js";
 import {
+  toolName as questionnaireCheckAnsweredToolName,
+  description as questionnaireCheckAnsweredDescription,
+  inputSchema as questionnaireCheckAnsweredInputSchema,
+  handleQuestionnaireCheckAnswered,
+} from "./tools/questionnaire.checkAnswered.js";
+import {
   toolName as medicalStudiesGetByAssessmentToolName,
   description as medicalStudiesGetByAssessmentDescription,
   inputSchema as medicalStudiesGetByAssessmentInputSchema,
@@ -530,6 +536,19 @@ register({
   },
   zodSchema: questionnaireGetStructureInputSchema,
   handler: handleQuestionnaireGetStructure,
+});
+
+register({
+  name: questionnaireCheckAnsweredToolName,
+  description: questionnaireCheckAnsweredDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    athleteId: { type: "number", description: "Athlete ID (required)" },
+    questionnaireId: { type: "number", description: "Optional — falls back to the coach's default type=1 (pre-anamnesis) questionnaire" },
+    since: { type: "string", description: "ISO instant with offset — only answers after this count (required)" },
+  },
+  zodSchema: questionnaireCheckAnsweredInputSchema,
+  handler: handleQuestionnaireCheckAnswered,
 });
 
 register({

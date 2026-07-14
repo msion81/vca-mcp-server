@@ -136,6 +136,8 @@ function toResult(
     createdAt: string | null;
     updatedAt: string | null;
     deletedAt: string | null;
+    optCode?: string | null;
+    questionnaireId?: number | null;
   },
   displayTimeZone?: string
 ): AppointmentSearchResult {
@@ -159,6 +161,8 @@ function toResult(
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
   };
+  if (row.optCode !== undefined) out.optCode = row.optCode;
+  if (row.questionnaireId !== undefined) out.questionnaireId = row.questionnaireId;
   if (tzOk) {
     const sl = row.startDate
       ? formatInstantInTimeZone(row.startDate, tzOk)
@@ -185,7 +189,7 @@ function stripUtcFieldsWhenCoachWallPresent(
   row: AppointmentSearchResult
 ): AppointmentSearchResult {
   if (!row.displayRangeLocal) return row;
-  return {
+  const out = {
     id: row.id,
     userRolesId: row.userRolesId,
     athleteId: row.athleteId,
@@ -200,6 +204,9 @@ function stripUtcFieldsWhenCoachWallPresent(
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
   } as AppointmentSearchResult;
+  if (row.optCode !== undefined) out.optCode = row.optCode;
+  if (row.questionnaireId !== undefined) out.questionnaireId = row.questionnaireId;
+  return out;
 }
 
 function toTimeParam(s: string): string {
@@ -362,6 +369,8 @@ export const appointmentService = {
           createdAt: appointment.createdAt,
           updatedAt: appointment.updatedAt,
           deletedAt: appointment.deletedAt,
+          optCode: appointment.optCode,
+          questionnaireId: appointment.questionnaireId,
         })
         .from(appointment)
         .where(baseWhere)

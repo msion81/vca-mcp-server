@@ -238,6 +238,10 @@ export interface AppointmentSearchResult {
   createdAt: string | null;
   updatedAt: string | null;
   deletedAt: string | null;
+  /** Solo poblado por appointments.search (anamnesis por OPT). */
+  optCode?: string | null;
+  /** Solo poblado por appointments.search (anamnesis por OPT). */
+  questionnaireId?: number | null;
 }
 
 /** Respuesta de appointments.create: la fila nueva + turnos activos que ya ocupaban ese intervalo (si hay). */

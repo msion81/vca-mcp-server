@@ -1,19 +1,44 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
+  nutritionAssessment,
+  nutritionAssessmentAnswer,
+  questionnaire,
   questionnaireOption,
   questionnaireQuestion,
   questionnaireQuestionByCategory,
   questionnaireQuestionsCategory,
 } from "../db/schema/index.js";
 import type {
+  QuestionnaireAnsweredResult,
   QuestionnaireCategory,
+  QuestionnaireCheckAnsweredInput,
   QuestionnaireGetStructureInput,
   QuestionnaireOption,
   QuestionnaireQuestion,
 } from "../schemas/questionnaire.js";
 import type { ToolResponse } from "../types/responses.js";
 import { error, success } from "../types/responses.js";
+
+/** Espeja questionnairePreAnamnesis (vca-server): tipo=1 = pre-anamnesis. */
+const PRE_ANAMNESIS_QUESTIONNAIRE_TYPE_ID = 1;
+
+async function resolveDefaultQuestionnaireId(coachId: number): Promise<number | null> {
+  if (!db) return null;
+  const [row] = await db
+    .select({ id: questionnaire.id })
+    .from(questionnaire)
+    .where(
+      and(
+        eq(questionnaire.userRolesId, coachId),
+        eq(questionnaire.questionnaireTypeId, PRE_ANAMNESIS_QUESTIONNAIRE_TYPE_ID),
+        eq(questionnaire.delete, 0)
+      )
+    )
+    .orderBy(asc(questionnaire.id))
+    .limit(1);
+  return row?.id ?? null;
+}
 
 export const questionnaireService = {
   getStructure: async (
@@ -104,6 +129,55 @@ export const questionnaireService = {
     } catch (err) {
       return error(
         err instanceof Error ? err.message : "Failed to get questionnaire structure"
+      );
+    }
+  },
+
+  /**
+   * Espeja el hasAnswer que vca-server ya calcula en calendar/appointment
+   * (nutrition_assessment_answer join nutrition_assessment, filtrado por
+   * athlete+coach+questionnaireId), parametrizado con `since` para saber si
+   * hubo una respuesta NUEVA después de un OPT puntual — vca-server reusa la
+   * misma fila de nutrition_assessment entre envíos, así que su propio flag
+   * no distingue "respondido alguna vez" de "respondido de nuevo ahora".
+   */
+  checkAnswered: async (
+    input: QuestionnaireCheckAnsweredInput
+  ): Promise<ToolResponse<QuestionnaireAnsweredResult>> => {
+    if (!db) return error("Database not configured");
+
+    try {
+      const resolvedQuestionnaireId =
+        input.questionnaireId ?? (await resolveDefaultQuestionnaireId(input.coachId));
+      if (resolvedQuestionnaireId == null) {
+        return success({ answered: false, lastAnsweredAt: null });
+      }
+
+      const [row] = await db
+        .select({ createdAt: nutritionAssessmentAnswer.createdAt })
+        .from(nutritionAssessmentAnswer)
+        .innerJoin(
+          nutritionAssessment,
+          eq(nutritionAssessmentAnswer.nutritionAssessmentId, nutritionAssessment.id)
+        )
+        .where(
+          and(
+            eq(nutritionAssessment.athleteId, input.athleteId),
+            eq(nutritionAssessment.userRolesId, input.coachId),
+            eq(nutritionAssessmentAnswer.questionnaireId, resolvedQuestionnaireId),
+            gt(nutritionAssessmentAnswer.createdAt, input.since)
+          )
+        )
+        .orderBy(desc(nutritionAssessmentAnswer.createdAt))
+        .limit(1);
+
+      return success({
+        answered: row != null,
+        lastAnsweredAt: row?.createdAt ?? null,
+      });
+    } catch (err) {
+      return error(
+        err instanceof Error ? err.message : "Failed to check questionnaire answer status"
       );
     }
   },
