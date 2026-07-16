@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { athlete, athleteSports, sports, athleteByUserProfileRole } from "../db/schema/index.js";
 import type {
@@ -299,41 +299,53 @@ export const athleteService = {
         }
       }
 
-      const results: AthleteWithSports[] = [];
-      for (const row of rows) {
-        const sportRows = await db
+      const athleteIds = rows.map((row) => row.id);
+      const sportRowsByAthleteId = new Map<
+        number,
+        { sportId: number; sportName: string; sportCode: string }[]
+      >();
+      if (athleteIds.length > 0) {
+        const allSportRows = await db
           .select({
+            athleteId: athleteSports.athleteId,
             sportId: sports.id,
             sportName: sports.name,
             sportCode: sports.code,
           })
           .from(athleteSports)
           .innerJoin(sports, eq(athleteSports.sportId, sports.id))
-          .where(eq(athleteSports.athleteId, row.id));
-        results.push(
-          toAthleteWithSports(
-            {
-              id: row.id,
-              name: row.name,
-              lastName: row.lastName,
-              email: row.email,
-              sex: row.sex,
-              phone: row.phone,
-              city: row.city,
-              state: row.state,
-              country: row.country,
-              birthday: row.birthday,
-              bodyWeight: row.bodyWeight,
-              height: row.height,
-              metricSystemId: row.metricSystemId,
-              createdAt: row.createdAt,
-              updatedAt: row.updatedAt,
-              socialNumber: row.socialNumber,
-            },
-            sportRows
-          )
-        );
+          .where(inArray(athleteSports.athleteId, athleteIds));
+        for (const r of allSportRows) {
+          if (r.athleteId == null) continue;
+          const list = sportRowsByAthleteId.get(r.athleteId) ?? [];
+          list.push(r);
+          sportRowsByAthleteId.set(r.athleteId, list);
+        }
       }
+
+      const results: AthleteWithSports[] = rows.map((row) =>
+        toAthleteWithSports(
+          {
+            id: row.id,
+            name: row.name,
+            lastName: row.lastName,
+            email: row.email,
+            sex: row.sex,
+            phone: row.phone,
+            city: row.city,
+            state: row.state,
+            country: row.country,
+            birthday: row.birthday,
+            bodyWeight: row.bodyWeight,
+            height: row.height,
+            metricSystemId: row.metricSystemId,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            socialNumber: row.socialNumber,
+          },
+          sportRowsByAthleteId.get(row.id) ?? []
+        )
+      );
       return success(results);
     } catch (err) {
       return error(
