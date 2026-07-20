@@ -35,6 +35,33 @@ export interface EventEditionResult {
   sportName: string | null;
 }
 
+/** Input schema for events.getById: fetch a single event by id. */
+export const eventsGetByIdSchema = z.object({
+  eventId: z.number().int().positive(),
+});
+
+export type EventsGetByIdInput = z.infer<typeof eventsGetByIdSchema>;
+
+/** Full detail for a single event, including its series (if it belongs to one). */
+export interface EventDetailResult {
+  id: number;
+  title: string;
+  eventType: number;
+  date: string | null;
+  time: string;
+  timezone: string;
+  location: string;
+  sportName: string | null;
+  isCompetition: boolean;
+  isPublic: boolean;
+  isOfficial: boolean;
+  distance: number | null;
+  distanceUnit: string | null;
+  seriesId: number | null;
+  seriesName: string | null;
+  year: number | null;
+}
+
 /** Event row type from pulled Drizzle schema. */
 export type EventRow = typeof events.$inferSelect;
 

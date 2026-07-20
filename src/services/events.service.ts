@@ -1,7 +1,13 @@
 import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { events, sports } from "../db/schema/index.js";
-import type { EventsGetEditionsInput, EventEditionResult, EventsSearchInput } from "../schemas/events.js";
+import { eventSeries, events, sports } from "../db/schema/index.js";
+import type {
+  EventDetailResult,
+  EventEditionResult,
+  EventsGetByIdInput,
+  EventsGetEditionsInput,
+  EventsSearchInput,
+} from "../schemas/events.js";
 import type { EventSearchResult } from "../schemas/events.js";
 import type { ToolResponse } from "../types/responses.js";
 import { success, error } from "../types/responses.js";
@@ -140,6 +146,65 @@ export const eventsService = {
       return error(
         err instanceof Error ? err.message : "Failed to get event editions"
       );
+    }
+  },
+
+  getById: async (
+    input: EventsGetByIdInput
+  ): Promise<ToolResponse<EventDetailResult | null>> => {
+    if (!db) {
+      return error("Database not configured");
+    }
+    try {
+      const [row] = await db
+        .select({
+          id: events.id,
+          title: events.title,
+          eventType: events.eventType,
+          date: events.date,
+          time: events.time,
+          timezone: events.timezone,
+          location: events.location,
+          sportName: sports.name,
+          isCompetition: events.isCompetition,
+          isPublic: events.isPublic,
+          isOfficial: events.isOfficial,
+          distance: events.distanceBasedValue,
+          distanceUnit: events.distanceBasedUnit,
+          seriesId: events.seriesId,
+          seriesName: eventSeries.name,
+          year: events.year,
+        })
+        .from(events)
+        .leftJoin(sports, eq(events.sportId, sports.id))
+        .leftJoin(eventSeries, eq(events.seriesId, eventSeries.id))
+        .where(and(eq(events.id, input.eventId), isNull(events.deletedAt)))
+        .limit(1);
+
+      if (!row) return success(null);
+
+      const result: EventDetailResult = {
+        id: row.id,
+        title: row.title,
+        eventType: row.eventType,
+        date: row.date,
+        time: row.time,
+        timezone: row.timezone,
+        location: row.location,
+        sportName: row.sportName ?? null,
+        isCompetition: row.isCompetition,
+        isPublic: row.isPublic,
+        isOfficial: row.isOfficial,
+        distance: row.distance ?? null,
+        distanceUnit: row.distanceUnit ?? null,
+        seriesId: row.seriesId,
+        seriesName: row.seriesName ?? null,
+        year: row.year,
+      };
+
+      return success(result);
+    } catch (err) {
+      return error(err instanceof Error ? err.message : "Failed to get event");
     }
   },
 };

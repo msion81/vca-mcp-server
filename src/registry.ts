@@ -293,6 +293,60 @@ import {
   inputSchema as eventParticipantDocumentsGetByAthleteInputSchema,
   handleEventParticipantDocumentsGetByAthlete,
 } from "./tools/eventParticipantDocuments.getByAthlete.js";
+import {
+  toolName as coachPaymentsSearchToolName,
+  description as coachPaymentsSearchDescription,
+  inputSchema as coachPaymentsSearchInputSchema,
+  handleCoachPaymentsSearch,
+} from "./tools/coachPayments.search.js";
+import {
+  toolName as billingSubscriptionBalanceGetBySubscriptionToolName,
+  description as billingSubscriptionBalanceGetBySubscriptionDescription,
+  inputSchema as billingSubscriptionBalanceGetBySubscriptionInputSchema,
+  handleBillingSubscriptionBalanceGetBySubscription,
+} from "./tools/billingSubscriptionBalance.getBySubscription.js";
+import {
+  toolName as billingIndividualPurchaseSearchToolName,
+  description as billingIndividualPurchaseSearchDescription,
+  inputSchema as billingIndividualPurchaseSearchInputSchema,
+  handleBillingIndividualPurchaseSearch,
+} from "./tools/billingIndividualPurchase.search.js";
+import {
+  toolName as foodIntakeDayFeedbackGetByFoodPlanToolName,
+  description as foodIntakeDayFeedbackGetByFoodPlanDescription,
+  inputSchema as foodIntakeDayFeedbackGetByFoodPlanInputSchema,
+  handleFoodIntakeDayFeedbackGetByFoodPlan,
+} from "./tools/foodIntakeDayFeedback.getByFoodPlan.js";
+import {
+  toolName as athleteDayActivitySearchToolName,
+  description as athleteDayActivitySearchDescription,
+  inputSchema as athleteDayActivitySearchInputSchema,
+  handleAthleteDayActivitySearch,
+} from "./tools/athleteDayActivity.search.js";
+import {
+  toolName as eventEditionResultsGetByEventToolName,
+  description as eventEditionResultsGetByEventDescription,
+  inputSchema as eventEditionResultsGetByEventInputSchema,
+  handleEventEditionResultsGetByEvent,
+} from "./tools/eventEditionResults.getByEvent.js";
+import {
+  toolName as eventEditionResultsGetByAthleteToolName,
+  description as eventEditionResultsGetByAthleteDescription,
+  inputSchema as eventEditionResultsGetByAthleteInputSchema,
+  handleEventEditionResultsGetByAthlete,
+} from "./tools/eventEditionResults.getByAthlete.js";
+import {
+  toolName as eventParticipantScheduleStageGetByAthleteToolName,
+  description as eventParticipantScheduleStageGetByAthleteDescription,
+  inputSchema as eventParticipantScheduleStageGetByAthleteInputSchema,
+  handleEventParticipantScheduleStageGetByAthlete,
+} from "./tools/eventParticipantScheduleStage.getByAthlete.js";
+import {
+  toolName as eventsGetByIdToolName,
+  description as eventsGetByIdDescription,
+  inputSchema as eventsGetByIdInputSchema,
+  handleEventsGetById,
+} from "./tools/events.getById.js";
 import type { z } from "zod";
 
 export interface ToolDef {
@@ -961,6 +1015,112 @@ register({
   },
   zodSchema: eventParticipantDocumentsGetByAthleteInputSchema,
   handler: handleEventParticipantDocumentsGetByAthlete,
+});
+
+register({
+  name: coachPaymentsSearchToolName,
+  description: coachPaymentsSearchDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    athleteId: { type: "number", description: "Optional athlete ID filter" },
+    subscriptionId: { type: "number", description: "Optional subscription ID filter" },
+    status: { type: "string", description: "Optional status filter (e.g. pending, approved)" },
+    limit: { type: "number", description: "Max results (1-100, default 50)" },
+  },
+  zodSchema: coachPaymentsSearchInputSchema,
+  handler: handleCoachPaymentsSearch,
+});
+
+register({
+  name: billingSubscriptionBalanceGetBySubscriptionToolName,
+  description: billingSubscriptionBalanceGetBySubscriptionDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    subscriptionId: { type: "number", description: "Subscription ID (required)" },
+  },
+  zodSchema: billingSubscriptionBalanceGetBySubscriptionInputSchema,
+  handler: handleBillingSubscriptionBalanceGetBySubscription,
+});
+
+register({
+  name: billingIndividualPurchaseSearchToolName,
+  description: billingIndividualPurchaseSearchDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    athleteId: { type: "number", description: "Optional athlete ID filter" },
+    limit: { type: "number", description: "Max results (1-100, default 50)" },
+  },
+  zodSchema: billingIndividualPurchaseSearchInputSchema,
+  handler: handleBillingIndividualPurchaseSearch,
+});
+
+register({
+  name: foodIntakeDayFeedbackGetByFoodPlanToolName,
+  description: foodIntakeDayFeedbackGetByFoodPlanDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    foodPlanId: { type: "number", description: "Food plan ID (required)" },
+    startDay: { type: "string", description: "Optional start day (YYYY-MM-DD)" },
+    endDay: { type: "string", description: "Optional end day (YYYY-MM-DD)" },
+  },
+  zodSchema: foodIntakeDayFeedbackGetByFoodPlanInputSchema,
+  handler: handleFoodIntakeDayFeedbackGetByFoodPlan,
+});
+
+register({
+  name: athleteDayActivitySearchToolName,
+  description: athleteDayActivitySearchDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach ID (user_roles_id) (required)" },
+    athleteId: { type: "number", description: "Optional athlete ID filter" },
+    nutritionAssessmentId: { type: "number", description: "Optional assessment ID filter" },
+    weekDay: { type: "number", description: "Optional week day filter" },
+    limit: { type: "number", description: "Max results (1-100, default 50)" },
+  },
+  zodSchema: athleteDayActivitySearchInputSchema,
+  handler: handleAthleteDayActivitySearch,
+});
+
+register({
+  name: eventEditionResultsGetByEventToolName,
+  description: eventEditionResultsGetByEventDescription,
+  inputSchema: {
+    eventId: { type: "number", description: "Event/edition ID (required)" },
+  },
+  zodSchema: eventEditionResultsGetByEventInputSchema,
+  handler: handleEventEditionResultsGetByEvent,
+});
+
+register({
+  name: eventEditionResultsGetByAthleteToolName,
+  description: eventEditionResultsGetByAthleteDescription,
+  inputSchema: {
+    athleteId: { type: "number", description: "Athlete ID (required)" },
+    eventId: { type: "number", description: "Optional event/edition ID filter" },
+  },
+  zodSchema: eventEditionResultsGetByAthleteInputSchema,
+  handler: handleEventEditionResultsGetByAthlete,
+});
+
+register({
+  name: eventParticipantScheduleStageGetByAthleteToolName,
+  description: eventParticipantScheduleStageGetByAthleteDescription,
+  inputSchema: {
+    athleteId: { type: "number", description: "Athlete ID (required)" },
+    eventId: { type: "number", description: "Optional event/edition ID filter" },
+  },
+  zodSchema: eventParticipantScheduleStageGetByAthleteInputSchema,
+  handler: handleEventParticipantScheduleStageGetByAthlete,
+});
+
+register({
+  name: eventsGetByIdToolName,
+  description: eventsGetByIdDescription,
+  inputSchema: {
+    eventId: { type: "number", description: "Event/edition ID (required)" },
+  },
+  zodSchema: eventsGetByIdInputSchema,
+  handler: handleEventsGetById,
 });
 
 export const getTool = (name: string): ToolDef | undefined => tools.get(name);
