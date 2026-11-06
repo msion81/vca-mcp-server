@@ -36,6 +36,8 @@ export const appointmentSearchSchema = z
     limit: z.number().int().min(1).max(100).optional().default(50),
     /** IANA zone; cuando es válida, la respuesta incluye startLocal/endLocal en esa zona. */
     clientTimeZone: z.string().min(1).max(120).optional(),
+    /** NOT SUPPORTED — triggers an explicit error redirecting to appointments.freeSlots. */
+    durationMinutes: z.number().int().min(1).optional(),
   })
   .refine(
     (data) => {
@@ -248,4 +250,28 @@ export interface AppointmentSearchResult {
 export interface AppointmentCreateResult {
   appointment: AppointmentSearchResult;
   overlappingExisting: AppointmentSearchResult[];
+}
+
+export const appointmentFreeSlotsSchema = z.object({
+  coachId: z.number().int().positive(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
+  durationMinutes: z.number().int().min(1).max(1440),
+  clientTimeZone: z.string().min(1).max(120).optional(),
+  /** Start of working window (local hour, 0–23). Default 8. */
+  startHour: z.number().int().min(0).max(23).optional().default(8),
+  /** End of working window (local hour, 1–24). Default 21. */
+  endHour: z.number().int().min(1).max(24).optional().default(21),
+  /** Max slots to return. Default 3. */
+  count: z.number().int().min(1).max(10).optional().default(3),
+});
+
+export type AppointmentFreeSlotsInput = z.infer<typeof appointmentFreeSlotsSchema>;
+
+/** Un slot libre disponible en la agenda del coach. startUtc/endUtc son los que pasar a appointments.create. */
+export interface AppointmentFreeSlot {
+  startUtc: string;
+  endUtc: string;
+  startLocal?: AppointmentLocalInstantParts;
+  endLocal?: AppointmentLocalInstantParts;
+  displayRangeLocal?: string;
 }

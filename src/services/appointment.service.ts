@@ -23,6 +23,8 @@ import type {
   AppointmentCreateInput,
   AppointmentCreateResult,
   AppointmentDurationListItem,
+  AppointmentFreeSlotsInput,
+  AppointmentFreeSlot,
   AppointmentListDurationsInput,
   AppointmentOverlapsInput,
   AppointmentSearchInput,
@@ -275,6 +277,32 @@ async function fetchCoachOverlappingAppointmentRows(
     )
     .orderBy(asc(appointment.startDate))
     .limit(cap);
+}
+
+const QUARTER_MS = 15 * 60 * 1000;
+
+/** Snap a UTC timestamp to the next 15-minute boundary (or itself if already on one). */
+function snapToNext15(ms: number): number {
+  return Math.ceil(ms / QUARTER_MS) * QUARTER_MS;
+}
+
+/**
+ * Convert a wall-clock hour on a specific calendar date in an IANA timezone to a UTC Date.
+ * Uses an iterative correction to handle UTC offsets correctly.
+ */
+function wallHourToUtc(dateIso: string, hour: number, tz: string): Date {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  let utc = new Date(Date.UTC(y, m - 1, d, hour, 0, 0, 0));
+  // Converge in up to 3 iterations (handles DST transitions)
+  for (let i = 0; i < 3; i++) {
+    const local = formatInstantInTimeZone(utc, tz);
+    if (!local) break;
+    const [lh, lm] = local.timeHm.split(":").map(Number);
+    const diff = hour * 60 - (lh * 60 + lm);
+    if (diff === 0) break;
+    utc = new Date(utc.getTime() + diff * 60 * 1000);
+  }
+  return utc;
 }
 
 export const appointmentService = {
@@ -633,6 +661,98 @@ export const appointmentService = {
     } catch (err) {
       return error(
         err instanceof Error ? err.message : "Failed to update appointment"
+      );
+    }
+  },
+
+  freeSlots: async (
+    input: AppointmentFreeSlotsInput
+  ): Promise<ToolResponse<AppointmentFreeSlot[]>> => {
+    if (!db) return error("Database not configured");
+
+    try {
+      const tz = await resolveAppointmentDisplayTimeZone(
+        input.coachId,
+        input.clientTimeZone
+      );
+      if (!tz) {
+        return error(
+          "Cannot compute free slots: no timezone resolved. Pass clientTimeZone (IANA) or set it on the coach profile."
+        );
+      }
+
+      const startHour = input.startHour ?? 8;
+      const endHour = input.endHour ?? 21;
+      if (endHour <= startHour) {
+        return error("endHour must be greater than startHour");
+      }
+
+      const windowStart = wallHourToUtc(input.date, startHour, tz);
+      const windowEnd = wallHourToUtc(input.date, endHour, tz);
+
+      // Get all active appointments within the window
+      const rows = await fetchCoachOverlappingAppointmentRows(
+        input.coachId,
+        windowStart.toISOString(),
+        windowEnd.toISOString(),
+        50
+      );
+
+      // Sort ascending
+      const sorted = [...rows].sort(
+        (a, b) =>
+          new Date(normalizeUtcInstant(a.startDate!)).getTime() -
+          new Date(normalizeUtcInstant(b.startDate!)).getTime()
+      );
+
+      // Build gap intervals
+      const gaps: Array<{ start: number; end: number }> = [];
+      let cursor = windowStart.getTime();
+      for (const row of sorted) {
+        const rStart = new Date(normalizeUtcInstant(row.startDate!)).getTime();
+        const rEnd = new Date(normalizeUtcInstant(row.endDate!)).getTime();
+        if (rStart > cursor) gaps.push({ start: cursor, end: rStart });
+        if (rEnd > cursor) cursor = rEnd;
+      }
+      if (windowEnd.getTime() > cursor) {
+        gaps.push({ start: cursor, end: windowEnd.getTime() });
+      }
+
+      // Extract slots from gaps (snapped to 15-min grid)
+      const durationMs = input.durationMinutes * 60 * 1000;
+      const count = input.count ?? 3;
+      const slots: AppointmentFreeSlot[] = [];
+
+      for (const gap of gaps) {
+        if (slots.length >= count) break;
+        let slotStart = snapToNext15(gap.start);
+        while (slotStart + durationMs <= gap.end && slots.length < count) {
+          const slotEnd = slotStart + durationMs;
+          const startDate = new Date(slotStart);
+          const endDate = new Date(slotEnd);
+          const startLocal = formatInstantInTimeZone(startDate, tz);
+          const endLocal = formatInstantInTimeZone(endDate, tz);
+          const slot: AppointmentFreeSlot = {
+            startUtc: startDate.toISOString(),
+            endUtc: endDate.toISOString(),
+          };
+          if (startLocal) slot.startLocal = startLocal;
+          if (endLocal) slot.endLocal = endLocal;
+          if (startLocal && endLocal) {
+            slot.displayRangeLocal =
+              startLocal.calendarDate === endLocal.calendarDate
+                ? `${startLocal.calendarDate} ${startLocal.timeHm}–${endLocal.timeHm}`
+                : `${startLocal.calendarDate} ${startLocal.timeHm} → ${endLocal.calendarDate} ${endLocal.timeHm}`;
+          }
+          slots.push(slot);
+          slotStart = snapToNext15(slotEnd);
+        }
+      }
+
+      return success(slots);
+    } catch (err) {
+      return error(
+        err instanceof Error ? err.message : "Failed to compute free slots"
       );
     }
   },

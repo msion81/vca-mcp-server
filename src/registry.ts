@@ -66,6 +66,12 @@ import {
   handleAppointmentsUpdate,
 } from "./tools/appointments.update.js";
 import {
+  toolName as appointmentsFreeSlotsToolName,
+  description as appointmentsFreeSlotsDescription,
+  inputSchema as appointmentsFreeSlotsInputSchema,
+  handleAppointmentsFreeSlots,
+} from "./tools/appointments.freeSlots.js";
+import {
   toolName as athleteStatsToolName,
   description as athleteStatsDescription,
   inputSchema as athleteStatsInputSchema,
@@ -537,6 +543,22 @@ register({
   },
   zodSchema: appointmentsUpdateInputSchema,
   handler: handleAppointmentsUpdate,
+});
+
+register({
+  name: appointmentsFreeSlotsToolName,
+  description: appointmentsFreeSlotsDescription,
+  inputSchema: {
+    coachId: { type: "number", description: "Coach user_roles id (automatically injected)" },
+    date: { type: "string", description: "Calendar date to search (YYYY-MM-DD, in coach local time)" },
+    durationMinutes: { type: "number", description: "Duration of the desired slot in minutes" },
+    clientTimeZone: { type: "string", description: "IANA timezone (e.g. America/Argentina/Buenos_Aires). Required unless coach has a timezone on their profile." },
+    startHour: { type: "number", description: "Working day start hour in local time (0–23, default 8)" },
+    endHour: { type: "number", description: "Working day end hour in local time (1–24, default 21)" },
+    count: { type: "number", description: "Max slots to return (1–10, default 3)" },
+  },
+  zodSchema: appointmentsFreeSlotsInputSchema,
+  handler: handleAppointmentsFreeSlots,
 });
 
 register({
