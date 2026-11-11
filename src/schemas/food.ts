@@ -88,6 +88,12 @@ export const componentSearchSchema = z.object({
 
 export type ComponentSearchInput = z.infer<typeof componentSearchSchema>;
 
+export interface FoodCategoryRecord {
+  id: number;
+  name: string;
+  code: string;
+}
+
 export interface FoodRecord {
   id: number;
   name: string;
@@ -105,6 +111,7 @@ export interface FoodRecord {
   foodBrandName: string | null;
   combined: boolean;
   generic: boolean;
+  categories: FoodCategoryRecord[];
 }
 
 export interface FoodComponentRecord {

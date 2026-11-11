@@ -1,10 +1,11 @@
-import { and, asc, eq, gte, ilike, isNotNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, inArray, isNotNull, lte, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { component, food, foodBrand, foodComponent } from "../db/schema/index.js";
+import { component, food, foodBrand, foodCategory, foodCategoryRelation, foodComponent } from "../db/schema/index.js";
 import type {
   ComponentRecord,
   ComponentSearchInput,
+  FoodCategoryRecord,
   FoodComponentRecord,
   FoodDetailRecord,
   FoodGetAllCombinedInput,
@@ -27,6 +28,26 @@ function foodTypeCondition(type: FoodType): SQL<unknown> | undefined {
   return undefined; // "all" — no filter
 }
 
+async function fetchCategoriesForIds(foodIds: number[]): Promise<Map<number, FoodCategoryRecord[]>> {
+  if (!db || foodIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      foodId: foodCategoryRelation.foodId,
+      catId: foodCategory.id,
+      catName: foodCategory.name,
+      catCode: foodCategory.code,
+    })
+    .from(foodCategoryRelation)
+    .innerJoin(foodCategory, eq(foodCategoryRelation.foodCategoryId, foodCategory.id))
+    .where(inArray(foodCategoryRelation.foodId, foodIds));
+  const map = new Map<number, FoodCategoryRecord[]>();
+  for (const r of rows) {
+    if (!map.has(r.foodId)) map.set(r.foodId, []);
+    map.get(r.foodId)!.push({ id: r.catId, name: r.catName, code: r.catCode });
+  }
+  return map;
+}
+
 function toFoodRecord(row: {
   id: number;
   name: string;
@@ -44,7 +65,7 @@ function toFoodRecord(row: {
   foodBrandName: string | null;
   combined: boolean | null;
   generic: boolean | null;
-}): FoodRecord {
+}, categories: FoodCategoryRecord[] = []): FoodRecord {
   return {
     id: row.id,
     name: row.name,
@@ -62,6 +83,7 @@ function toFoodRecord(row: {
     foodBrandName: row.foodBrandName,
     combined: row.combined ?? false,
     generic: row.generic ?? false,
+    categories,
   };
 }
 
@@ -121,7 +143,8 @@ export const foodService = {
         .orderBy(asc(food.name))
         .limit(input.limit);
 
-      return success(rows.map(toFoodRecord));
+      const catMap = await fetchCategoriesForIds(rows.map((r) => r.id));
+      return success(rows.map((r) => toFoodRecord(r, catMap.get(r.id) ?? [])));
     } catch (err) {
       return error(err instanceof Error ? err.message : "Failed to search food by name");
     }
@@ -163,12 +186,13 @@ export const foodService = {
         .orderBy(asc(food.name))
         .limit(input.names.length * input.limitPerName);
 
+      const catMap = await fetchCategoriesForIds(rows.map((r) => r.id));
       const grouped = input.names.map((query) => {
         const lower = query.toLowerCase();
         const results = rows
           .filter((r) => r.name.toLowerCase().includes(lower))
           .slice(0, input.limitPerName)
-          .map(toFoodRecord);
+          .map((r) => toFoodRecord(r, catMap.get(r.id) ?? []));
         return { query, results };
       });
 
@@ -210,7 +234,7 @@ export const foodService = {
         .limit(input.limit)
         .offset(input.offset);
 
-      return success(rows.map(toFoodRecord));
+      return success(rows.map((r) => toFoodRecord(r)));
     } catch (err) {
       return error(err instanceof Error ? err.message : "Failed to get generic food");
     }
@@ -248,7 +272,7 @@ export const foodService = {
         .limit(input.limit)
         .offset(input.offset);
 
-      return success(rows.map(toFoodRecord));
+      return success(rows.map((r) => toFoodRecord(r)));
     } catch (err) {
       return error(err instanceof Error ? err.message : "Failed to get combined food");
     }
@@ -294,7 +318,7 @@ export const foodService = {
         .limit(input.limit)
         .offset(input.offset);
 
-      return success(rows.map(toFoodRecord));
+      return success(rows.map((r) => toFoodRecord(r)));
     } catch (err) {
       return error(err instanceof Error ? err.message : "Failed to get manufactured food");
     }
@@ -394,25 +418,28 @@ export const foodService = {
 
       if (!foodRow) return success(null);
 
-      const componentRows = await db
-        .select({
-          id: foodComponent.id,
-          componentId: foodComponent.componentId,
-          componentName: component.name,
-          componentCode: component.code,
-          value: foodComponent.value,
-          measure: foodComponent.measure,
-          details: foodComponent.details,
-          createdAt: foodComponent.createdAt,
-          updatedAt: foodComponent.updatedAt,
-        })
-        .from(foodComponent)
-        .innerJoin(component, eq(foodComponent.componentId, component.id))
-        .where(eq(foodComponent.foodId, input.foodId))
-        .orderBy(asc(component.name));
+      const [componentRows, catMap] = await Promise.all([
+        db
+          .select({
+            id: foodComponent.id,
+            componentId: foodComponent.componentId,
+            componentName: component.name,
+            componentCode: component.code,
+            value: foodComponent.value,
+            measure: foodComponent.measure,
+            details: foodComponent.details,
+            createdAt: foodComponent.createdAt,
+            updatedAt: foodComponent.updatedAt,
+          })
+          .from(foodComponent)
+          .innerJoin(component, eq(foodComponent.componentId, component.id))
+          .where(eq(foodComponent.foodId, input.foodId))
+          .orderBy(asc(component.name)),
+        fetchCategoriesForIds([input.foodId]),
+      ]);
 
       return success({
-        ...toFoodRecord(foodRow),
+        ...toFoodRecord(foodRow, catMap.get(input.foodId) ?? []),
         components: componentRows.map(toFoodComponentRecord),
       });
     } catch (err) {
