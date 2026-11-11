@@ -3,9 +3,13 @@ import { z } from "zod";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
+const foodTypeSchema = z.enum(["generic", "branded", "combined", "all"]).optional().default("all");
+export type FoodType = z.infer<typeof foodTypeSchema>;
+
 export const foodSearchByNameSchema = z.object({
   name: z.string().trim().min(1),
   limit: z.number().int().min(1).max(MAX_LIMIT).optional().default(DEFAULT_LIMIT),
+  type: foodTypeSchema,
 });
 
 export type FoodSearchByNameInput = z.infer<typeof foodSearchByNameSchema>;
@@ -13,6 +17,7 @@ export type FoodSearchByNameInput = z.infer<typeof foodSearchByNameSchema>;
 export const foodSearchByNamesSchema = z.object({
   names: z.array(z.string().trim().min(1)).min(1).max(50),
   limitPerName: z.number().int().min(1).max(10).optional().default(3),
+  type: foodTypeSchema,
 });
 
 export type FoodSearchByNamesInput = z.infer<typeof foodSearchByNamesSchema>;

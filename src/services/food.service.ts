@@ -18,6 +18,14 @@ import type {
   FoodSearchByNamesInput,
 } from "../schemas/food.js";
 import { error, success, type ToolResponse } from "../types/responses.js";
+import type { FoodType } from "../schemas/food.js";
+
+function foodTypeCondition(type: FoodType): SQL<unknown> | undefined {
+  if (type === "generic")  return and(eq(food.generic, true),  eq(food.combined, false));
+  if (type === "branded")  return and(eq(food.generic, false), eq(food.combined, false), isNotNull(food.foodBrandId));
+  if (type === "combined") return eq(food.combined, true);
+  return undefined; // "all" — no filter
+}
 
 function toFoodRecord(row: {
   id: number;
@@ -109,7 +117,7 @@ export const foodService = {
         })
         .from(food)
         .leftJoin(foodBrand, eq(food.foodBrandId, foodBrand.id))
-        .where(ilike(food.name, `%${input.name}%`))
+        .where(and(ilike(food.name, `%${input.name}%`), foodTypeCondition(input.type)))
         .orderBy(asc(food.name))
         .limit(input.limit);
 
@@ -148,7 +156,10 @@ export const foodService = {
         .select(baseSelect)
         .from(food)
         .leftJoin(foodBrand, eq(food.foodBrandId, foodBrand.id))
-        .where(or(...input.names.map((n) => ilike(food.name, `%${n}%`))))
+        .where(and(
+          or(...input.names.map((n) => ilike(food.name, `%${n}%`))),
+          foodTypeCondition(input.type),
+        ))
         .orderBy(asc(food.name))
         .limit(input.names.length * input.limitPerName);
 

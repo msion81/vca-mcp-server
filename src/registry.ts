@@ -661,6 +661,7 @@ register({
   inputSchema: {
     name: { type: "string", description: "Food name or fragment (required)" },
     limit: { type: "number", description: "Max results (1-100, default 20)" },
+    type: { type: "string", description: "Filter by food type: 'generic' (staple ingredients), 'branded' (manufactured products), 'combined' (prepared dishes), 'all' (default)" },
   },
   zodSchema: foodSearchByNameInputSchema,
   handler: handleFoodSearchByName,
@@ -672,6 +673,7 @@ register({
   inputSchema: {
     names: { type: "array", description: "List of food name strings to search (max 50)" },
     limitPerName: { type: "number", description: "Max results per name (1-10, default 3)" },
+    type: { type: "string", description: "Filter by food type: 'generic' (staple ingredients), 'branded' (manufactured products), 'combined' (prepared dishes), 'all' (default)" },
   },
   zodSchema: foodSearchByNamesInputSchema,
   handler: handleFoodSearchByNames,
