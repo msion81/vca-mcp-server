@@ -10,6 +10,13 @@ export const foodSearchByNameSchema = z.object({
 
 export type FoodSearchByNameInput = z.infer<typeof foodSearchByNameSchema>;
 
+export const foodSearchByNamesSchema = z.object({
+  names: z.array(z.string().trim().min(1)).min(1).max(50),
+  limitPerName: z.number().int().min(1).max(10).optional().default(3),
+});
+
+export type FoodSearchByNamesInput = z.infer<typeof foodSearchByNamesSchema>;
+
 export const foodGetAllGenericSchema = z.object({
   limit: z.number().int().min(1).max(MAX_LIMIT).optional().default(DEFAULT_LIMIT),
   offset: z.number().int().min(0).optional().default(0),

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, ilike, isNotNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, isNotNull, lte, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { component, food, foodBrand, foodComponent } from "../db/schema/index.js";
@@ -15,6 +15,7 @@ import type {
   FoodGetFullDetailInput,
   FoodRecord,
   FoodSearchByNameInput,
+  FoodSearchByNamesInput,
 } from "../schemas/food.js";
 import { error, success, type ToolResponse } from "../types/responses.js";
 
@@ -115,6 +116,54 @@ export const foodService = {
       return success(rows.map(toFoodRecord));
     } catch (err) {
       return error(err instanceof Error ? err.message : "Failed to search food by name");
+    }
+  },
+
+  searchByNames: async (
+    input: FoodSearchByNamesInput
+  ): Promise<ToolResponse<{ query: string; results: FoodRecord[] }[]>> => {
+    if (!db) return error("Database not configured");
+
+    try {
+      const baseSelect = {
+        id: food.id,
+        name: food.name,
+        portion: food.portion,
+        portionUnit: food.portionUnit,
+        description: food.description,
+        image: food.image,
+        ingredients: food.ingredients,
+        metadata: food.metadata,
+        createdAt: food.createdAt,
+        updatedAt: food.updatedAt,
+        createdBy: food.createdBy,
+        updatedBy: food.updatedBy,
+        foodBrandId: food.foodBrandId,
+        foodBrandName: foodBrand.name,
+        combined: food.combined,
+        generic: food.generic,
+      };
+
+      const rows = await db
+        .select(baseSelect)
+        .from(food)
+        .leftJoin(foodBrand, eq(food.foodBrandId, foodBrand.id))
+        .where(or(...input.names.map((n) => ilike(food.name, `%${n}%`))))
+        .orderBy(asc(food.name))
+        .limit(input.names.length * input.limitPerName);
+
+      const grouped = input.names.map((query) => {
+        const lower = query.toLowerCase();
+        const results = rows
+          .filter((r) => r.name.toLowerCase().includes(lower))
+          .slice(0, input.limitPerName)
+          .map(toFoodRecord);
+        return { query, results };
+      });
+
+      return success(grouped);
+    } catch (err) {
+      return error(err instanceof Error ? err.message : "Failed to batch search food by names");
     }
   },
 

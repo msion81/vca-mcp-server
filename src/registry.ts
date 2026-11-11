@@ -270,6 +270,12 @@ import {
   handleFoodSearchByName,
 } from "./tools/food.searchByName.js";
 import {
+  toolName as foodSearchByNamesToolName,
+  description as foodSearchByNamesDescription,
+  inputSchema as foodSearchByNamesInputSchema,
+  handleFoodSearchByNames,
+} from "./tools/food.searchByNames.js";
+import {
   toolName as billingPlansSearchToolName,
   description as billingPlansSearchDescription,
   inputSchema as billingPlansSearchInputSchema,
@@ -658,6 +664,17 @@ register({
   },
   zodSchema: foodSearchByNameInputSchema,
   handler: handleFoodSearchByName,
+});
+
+register({
+  name: foodSearchByNamesToolName,
+  description: foodSearchByNamesDescription,
+  inputSchema: {
+    names: { type: "array", description: "List of food name strings to search (max 50)" },
+    limitPerName: { type: "number", description: "Max results per name (1-10, default 3)" },
+  },
+  zodSchema: foodSearchByNamesInputSchema,
+  handler: handleFoodSearchByNames,
 });
 
 register({
