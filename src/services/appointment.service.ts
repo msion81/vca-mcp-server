@@ -463,7 +463,7 @@ export const appointmentService = {
 
   overlaps: async (
     input: AppointmentOverlapsInput
-  ): Promise<ToolResponse<AppointmentSearchResult[]>> => {
+  ): Promise<ToolResponse<{ slotDisplayLocal: string | null; conflicts: AppointmentSearchResult[] }>> => {
     if (!db) return error("Database not configured");
 
     try {
@@ -479,10 +479,25 @@ export const appointmentService = {
         endNormalized,
         input.limit ?? 25
       );
-      const result = rows.map((r) =>
+      const conflicts = rows.map((r) =>
         stripUtcFieldsWhenCoachWallPresent(toResult(r, tz))
       );
-      return success(result);
+
+      // Local-time display of the REQUESTED slot so the model always has
+      // coach-wall time available even when conflicts is empty.
+      let slotDisplayLocal: string | null = null;
+      if (tz) {
+        const sl = formatInstantInTimeZone(startNormalized, tz);
+        const el = formatInstantInTimeZone(endNormalized, tz);
+        if (sl && el) {
+          slotDisplayLocal =
+            sl.calendarDate === el.calendarDate
+              ? `${sl.calendarDate} ${sl.timeHm}–${el.timeHm}`
+              : `${sl.calendarDate} ${sl.timeHm} → ${el.calendarDate} ${el.timeHm}`;
+        }
+      }
+
+      return success({ slotDisplayLocal, conflicts });
     } catch (err) {
       return error(
         err instanceof Error ? err.message : "Failed to list overlapping appointments"
