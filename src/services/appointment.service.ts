@@ -18,6 +18,11 @@ import {
   appointmentDuration,
   athleteByUserProfileRole,
 } from "../db/schema/index.js";
+import {
+  createGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
+} from "../integrations/google/calendar.js";
 import { formatInstantInTimeZone, isValidIanaTimeZone } from "../lib/zoned-time-format.js";
 import type {
   AppointmentCreateInput,
@@ -305,6 +310,111 @@ function wallHourToUtc(dateIso: string, hour: number, tz: string): Date {
   return utc;
 }
 
+type GoogleSyncRow = {
+  id: number;
+  userRolesId: number | null;
+  athleteId: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: string | null;
+  description: string | null;
+  optCode?: string | null;
+  metadata?: unknown;
+  externalCalendarEventId?: string | null;
+};
+
+/** Never throws — a Google Calendar failure must not affect the appointment write. */
+async function syncCreatedAppointmentToGoogleCalendar(
+  created: GoogleSyncRow,
+  tz: string | undefined
+): Promise<void> {
+  if (!db || created.userRolesId == null || !created.startDate || !created.endDate) return;
+  try {
+    const googleEvent = await createGoogleCalendarEvent(
+      created.userRolesId,
+      {
+        id: created.id,
+        athleteId: created.athleteId,
+        startDate: created.startDate,
+        endDate: created.endDate,
+        status: created.status,
+        description: created.description,
+        optCode: created.optCode,
+        metadata: created.metadata as { googleMeetConference?: boolean } | null,
+      },
+      tz ?? "UTC"
+    );
+    if (!googleEvent) return;
+
+    await db
+      .update(appointment)
+      .set({
+        externalCalendarEventId: googleEvent.id,
+        metadata: {
+          ...((created.metadata as Record<string, unknown> | null) ?? {}),
+          hangoutLink: googleEvent.hangoutLink ?? "",
+          eventResponse: googleEvent,
+        },
+      })
+      .where(eq(appointment.id, created.id));
+  } catch (err) {
+    console.error("[appointmentService.create] Google Calendar sync failed", err);
+  }
+}
+
+/** Never throws — a Google Calendar failure must not affect the appointment write. */
+async function syncUpdatedAppointmentToGoogleCalendar(
+  updated: GoogleSyncRow,
+  wasDeleted: boolean
+): Promise<void> {
+  if (!db || updated.userRolesId == null) return;
+  if (!updated.externalCalendarEventId) return;
+
+  try {
+    if (wasDeleted) {
+      await deleteGoogleCalendarEvent(updated.userRolesId, updated.externalCalendarEventId);
+      await db
+        .update(appointment)
+        .set({ externalCalendarEventId: null })
+        .where(eq(appointment.id, updated.id));
+      return;
+    }
+
+    if (!updated.startDate || !updated.endDate) return;
+    const tz = await resolveAppointmentDisplayTimeZone(updated.userRolesId, undefined);
+
+    const googleEvent = await updateGoogleCalendarEvent(
+      updated.userRolesId,
+      updated.externalCalendarEventId,
+      {
+        id: updated.id,
+        athleteId: updated.athleteId,
+        startDate: updated.startDate,
+        endDate: updated.endDate,
+        status: updated.status,
+        description: updated.description,
+        optCode: updated.optCode,
+        metadata: updated.metadata as { googleMeetConference?: boolean } | null,
+      },
+      tz ?? "UTC"
+    );
+    if (!googleEvent) return;
+
+    await db
+      .update(appointment)
+      .set({
+        metadata: {
+          ...((updated.metadata as Record<string, unknown> | null) ?? {}),
+          hangoutLink: googleEvent.hangoutLink ?? "",
+          eventResponse: googleEvent,
+        },
+      })
+      .where(eq(appointment.id, updated.id));
+  } catch (err) {
+    console.error("[appointmentService.update] Google Calendar sync failed", err);
+  }
+}
+
 export const appointmentService = {
   search: async (
     input: AppointmentSearchInput
@@ -570,11 +680,15 @@ export const appointmentService = {
           createdAt: appointment.createdAt,
           updatedAt: appointment.updatedAt,
           deletedAt: appointment.deletedAt,
+          optCode: appointment.optCode,
+          metadata: appointment.metadata,
         });
 
       if (!created?.id) {
         return error("Appointment insert returned no row — creation may have silently failed");
       }
+
+      await syncCreatedAppointmentToGoogleCalendar(created, tz);
 
       return success({
         appointment: stripUtcFieldsWhenCoachWallPresent(toResult(created, tz)),
@@ -670,7 +784,14 @@ export const appointmentService = {
           createdAt: appointment.createdAt,
           updatedAt: appointment.updatedAt,
           deletedAt: appointment.deletedAt,
+          optCode: appointment.optCode,
+          metadata: appointment.metadata,
+          externalCalendarEventId: appointment.externalCalendarEventId,
         });
+
+      if (updated) {
+        await syncUpdatedAppointmentToGoogleCalendar(updated, input.deleted === true);
+      }
 
       return success(updated ? toResult(updated) : null);
     } catch (err) {
