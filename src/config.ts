@@ -14,4 +14,6 @@ export const config = {
   /** Same Google OAuth app credentials vca-server uses — reused, not a separate Google Cloud app. */
   googleClientId: getEnv("GOOGLE_CLIENT_ID", ""),
   googleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+  /** Shared secret for internal callers (Tania agent + AthlEvo Connect). Empty = skip check (local dev). */
+  internalKey: getEnv("INTERNAL_KEY", ""),
 } as const;
