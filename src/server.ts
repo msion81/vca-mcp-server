@@ -21,6 +21,7 @@ function createMcpServer(): McpServer {
     server.registerTool(tool.name, {
       description: tool.description,
       inputSchema: tool.zodSchema,
+      annotations: tool.annotations,
     }, async (args) => {
         const result = await handleToolCall(tool.name, args);
         const text =
@@ -101,6 +102,17 @@ const mcpGetHandler = (
     }
   });
 };
+
+// Internal key check: only Tania and AthlEvo Connect can call MCP endpoints.
+// Skipped when INTERNAL_KEY is not set (local dev).
+app.use(["/mcp", "/sse"], (req, res, next) => {
+  const key = req.headers["x-internal-key"];
+  if (config.internalKey && key !== config.internalKey) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+});
 
 app.post("/mcp", mcpPostHandler);
 app.get("/mcp", mcpGetHandler);

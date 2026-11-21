@@ -361,12 +361,20 @@ import {
 } from "./tools/events.getById.js";
 import type { z } from "zod";
 
+export interface ToolAnnotations {
+  /** true = tool never mutates data; false/absent = may mutate data */
+  readOnlyHint?: boolean;
+  /** 'internal' = only Tania, never exposed via AthlEvo Connect */
+  audience?: "coach" | "internal";
+}
+
 export interface ToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, { description?: string; type?: string }>;
   zodSchema: z.ZodTypeAny;
   handler: (params: unknown) => Promise<ToolResponse<unknown>>;
+  annotations?: ToolAnnotations;
 }
 
 const tools = new Map<string, ToolDef>();
@@ -388,6 +396,7 @@ register({
   },
   zodSchema: inputSchema,
   handler: handleEventsSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -398,6 +407,7 @@ register({
   },
   zodSchema: athleteGetByIdInputSchema,
   handler: handleAthleteGetById,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -414,6 +424,7 @@ register({
   },
   zodSchema: athletesSearchInputSchema,
   handler: handleAthletesSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -424,6 +435,7 @@ register({
   },
   zodSchema: coachGetTimezoneInputSchema,
   handler: handleCoachGetTimezone,
+  annotations: { readOnlyHint: true, audience: "internal" },
 });
 
 register({
@@ -434,6 +446,7 @@ register({
   },
   zodSchema: assessmentGetByIdInputSchema,
   handler: handleAssessmentGetById,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -448,6 +461,7 @@ register({
   },
   zodSchema: assessmentsSearchInputSchema,
   handler: handleAssessmentsSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -470,6 +484,7 @@ register({
   },
   zodSchema: appointmentsSearchInputSchema,
   handler: handleAppointmentsSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -488,6 +503,7 @@ register({
   },
   zodSchema: appointmentsOverlapsInputSchema,
   handler: handleAppointmentsOverlaps,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -498,6 +514,7 @@ register({
   },
   zodSchema: appointmentsListDurationsInputSchema,
   handler: handleAppointmentsListDurations,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -525,6 +542,7 @@ register({
   },
   zodSchema: appointmentsCreateInputSchema,
   handler: handleAppointmentsCreate,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -549,6 +567,7 @@ register({
   },
   zodSchema: appointmentsUpdateInputSchema,
   handler: handleAppointmentsUpdate,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -565,6 +584,7 @@ register({
   },
   zodSchema: appointmentsFreeSlotsInputSchema,
   handler: handleAppointmentsFreeSlots,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -573,6 +593,7 @@ register({
   inputSchema: {},
   zodSchema: athleteStatsInputSchema as z.ZodTypeAny,
   handler: handleAthleteStats as (params: unknown) => Promise<ToolResponse<unknown>>,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -583,6 +604,7 @@ register({
   },
   zodSchema: assessmentGetFullInputSchema,
   handler: handleAssessmentGetFull,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -597,6 +619,7 @@ register({
   },
   zodSchema: anthropometrySearchInputSchema,
   handler: handleAnthropometrySearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -607,6 +630,7 @@ register({
   },
   zodSchema: anthropometryGetByAssessmentInputSchema,
   handler: handleAnthropometryGetByAssessment,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -618,6 +642,7 @@ register({
   },
   zodSchema: questionnaireGetStructureInputSchema,
   handler: handleQuestionnaireGetStructure,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -631,6 +656,7 @@ register({
   },
   zodSchema: questionnaireCheckAnsweredInputSchema,
   handler: handleQuestionnaireCheckAnswered,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -641,6 +667,7 @@ register({
   },
   zodSchema: medicalStudiesGetByAssessmentInputSchema,
   handler: handleMedicalStudiesGetByAssessment,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -653,6 +680,7 @@ register({
   },
   zodSchema: medicalStudiesGetByAthleteInputSchema,
   handler: handleMedicalStudiesGetByAthlete,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -665,6 +693,7 @@ register({
   },
   zodSchema: foodSearchByNameInputSchema,
   handler: handleFoodSearchByName,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -677,6 +706,7 @@ register({
   },
   zodSchema: foodSearchByNamesInputSchema,
   handler: handleFoodSearchByNames,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -688,6 +718,7 @@ register({
   },
   zodSchema: foodGetAllGenericInputSchema,
   handler: handleFoodGetAllGeneric,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -699,6 +730,7 @@ register({
   },
   zodSchema: foodGetAllCombinedInputSchema,
   handler: handleFoodGetAllCombined,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -711,6 +743,7 @@ register({
   },
   zodSchema: foodGetAllManufacturedInputSchema,
   handler: handleFoodGetAllManufactured,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -725,6 +758,7 @@ register({
   },
   zodSchema: foodGetByComponentInputSchema,
   handler: handleFoodGetByComponent,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -735,6 +769,7 @@ register({
   },
   zodSchema: foodGetFullFoodDetailInputSchema,
   handler: handleFoodGetFullFoodDetail,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -745,6 +780,7 @@ register({
   },
   zodSchema: foodGetByIdInputSchema,
   handler: handleFoodGetById,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -756,6 +792,7 @@ register({
   },
   zodSchema: componentSearchInputSchema,
   handler: handleComponentSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -769,6 +806,7 @@ register({
   },
   zodSchema: brickSearchInputSchema,
   handler: handleBrickSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -780,6 +818,7 @@ register({
   },
   zodSchema: brickGetDetailInputSchema,
   handler: handleBrickGetDetail,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -800,6 +839,7 @@ register({
   },
   zodSchema: brickCreateInputSchema,
   handler: handleBrickCreate,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -821,6 +861,7 @@ register({
   },
   zodSchema: brickUpdateInputSchema,
   handler: handleBrickUpdate,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -836,6 +877,7 @@ register({
   },
   zodSchema: brickAddFoodInputSchema,
   handler: handleBrickAddFood,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -848,6 +890,7 @@ register({
   },
   zodSchema: brickRemoveFoodInputSchema,
   handler: handleBrickRemoveFood,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -860,6 +903,7 @@ register({
   },
   zodSchema: brickSetComponentsInputSchema,
   handler: handleBrickSetComponents,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -875,6 +919,7 @@ register({
   },
   zodSchema: foodPlanSearchInputSchema,
   handler: handleFoodPlanSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -886,6 +931,7 @@ register({
   },
   zodSchema: foodPlanGetByIdInputSchema,
   handler: handleFoodPlanGetById,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -897,6 +943,7 @@ register({
   },
   zodSchema: foodPlanGetFullInputSchema,
   handler: handleFoodPlanGetFull,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -916,6 +963,7 @@ register({
   },
   zodSchema: foodPlanCreateInputSchema,
   handler: handleFoodPlanCreate,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -936,6 +984,7 @@ register({
   },
   zodSchema: foodPlanUpdateInputSchema,
   handler: handleFoodPlanUpdate,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -953,6 +1002,7 @@ register({
   },
   zodSchema: foodPlanAddIntakeInputSchema,
   handler: handleFoodPlanAddIntake,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -965,6 +1015,7 @@ register({
   },
   zodSchema: foodPlanRemoveIntakeInputSchema,
   handler: handleFoodPlanRemoveIntake,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -978,6 +1029,7 @@ register({
   },
   zodSchema: foodPlanAddBrickToIntakeInputSchema,
   handler: handleFoodPlanAddBrickToIntake,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -993,6 +1045,7 @@ register({
   },
   zodSchema: foodPlanRemoveBrickFromIntakeInputSchema,
   handler: handleFoodPlanRemoveBrickFromIntake,
+  annotations: { readOnlyHint: false, audience: "coach" },
 });
 
 register({
@@ -1001,6 +1054,7 @@ register({
   inputSchema: {},
   zodSchema: intakeTypeListInputSchema,
   handler: handleIntakeTypeList,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1012,6 +1066,7 @@ register({
   },
   zodSchema: billingPlansSearchInputSchema,
   handler: handleBillingPlansSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1025,6 +1080,7 @@ register({
   },
   zodSchema: billingSubscriptionsSearchInputSchema,
   handler: handleBillingSubscriptionsSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1035,6 +1091,7 @@ register({
   },
   zodSchema: eventsGetEditionsInputSchema,
   handler: handleEventsGetEditions,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1045,6 +1102,7 @@ register({
   },
   zodSchema: eventDocumentsGetByEventInputSchema,
   handler: handleEventDocumentsGetByEvent,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1056,6 +1114,7 @@ register({
   },
   zodSchema: eventParticipantDocumentsGetByAthleteInputSchema,
   handler: handleEventParticipantDocumentsGetByAthlete,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1070,6 +1129,7 @@ register({
   },
   zodSchema: coachPaymentsSearchInputSchema,
   handler: handleCoachPaymentsSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1081,6 +1141,7 @@ register({
   },
   zodSchema: billingSubscriptionBalanceGetBySubscriptionInputSchema,
   handler: handleBillingSubscriptionBalanceGetBySubscription,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1093,6 +1154,7 @@ register({
   },
   zodSchema: billingIndividualPurchaseSearchInputSchema,
   handler: handleBillingIndividualPurchaseSearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1106,6 +1168,7 @@ register({
   },
   zodSchema: foodIntakeDayFeedbackGetByFoodPlanInputSchema,
   handler: handleFoodIntakeDayFeedbackGetByFoodPlan,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1120,6 +1183,7 @@ register({
   },
   zodSchema: athleteDayActivitySearchInputSchema,
   handler: handleAthleteDayActivitySearch,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1130,6 +1194,7 @@ register({
   },
   zodSchema: eventEditionResultsGetByEventInputSchema,
   handler: handleEventEditionResultsGetByEvent,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1141,6 +1206,7 @@ register({
   },
   zodSchema: eventEditionResultsGetByAthleteInputSchema,
   handler: handleEventEditionResultsGetByAthlete,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1152,6 +1218,7 @@ register({
   },
   zodSchema: eventParticipantScheduleStageGetByAthleteInputSchema,
   handler: handleEventParticipantScheduleStageGetByAthlete,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 register({
@@ -1162,6 +1229,7 @@ register({
   },
   zodSchema: eventsGetByIdInputSchema,
   handler: handleEventsGetById,
+  annotations: { readOnlyHint: true, audience: "coach" },
 });
 
 export const getTool = (name: string): ToolDef | undefined => tools.get(name);
