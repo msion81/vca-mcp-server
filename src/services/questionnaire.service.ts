@@ -52,46 +52,47 @@ export const questionnaireService = {
       if (input.categoryCode)
         categoryConditions.push(eq(questionnaireQuestionsCategory.code, input.categoryCode));
 
-      const categoryRows = await db
-        .select()
-        .from(questionnaireQuestionsCategory)
-        .where(and(...categoryConditions))
-        .orderBy(asc(questionnaireQuestionsCategory.id));
+      // Categories, questions and options don't depend on each other — run concurrently.
+      const [categoryRows, questionRows, optionRows] = await Promise.all([
+        db
+          .select()
+          .from(questionnaireQuestionsCategory)
+          .where(and(...categoryConditions))
+          .orderBy(asc(questionnaireQuestionsCategory.id)),
 
-      // Load all active questions mapped to those categories
-      const questionRows = await db
-        .select({
-          questionId: questionnaireQuestion.id,
-          questionText: questionnaireQuestion.questionText,
-          questionTypeId: questionnaireQuestion.questionnaireQuestionTypeId,
-          note: questionnaireQuestion.note,
-          order: questionnaireQuestion.order,
-          categoryId: questionnaireQuestionByCategory.questionnaireQuestionsCategoryId,
-        })
-        .from(questionnaireQuestion)
-        .innerJoin(
-          questionnaireQuestionByCategory,
-          eq(questionnaireQuestion.id, questionnaireQuestionByCategory.questionnaireQuestionId)
-        )
-        .where(
-          and(
-            eq(questionnaireQuestion.active, 1),
-            eq(questionnaireQuestion.delete, 0)
+        db
+          .select({
+            questionId: questionnaireQuestion.id,
+            questionText: questionnaireQuestion.questionText,
+            questionTypeId: questionnaireQuestion.questionnaireQuestionTypeId,
+            note: questionnaireQuestion.note,
+            order: questionnaireQuestion.order,
+            categoryId: questionnaireQuestionByCategory.questionnaireQuestionsCategoryId,
+          })
+          .from(questionnaireQuestion)
+          .innerJoin(
+            questionnaireQuestionByCategory,
+            eq(questionnaireQuestion.id, questionnaireQuestionByCategory.questionnaireQuestionId)
           )
-        )
-        .orderBy(asc(questionnaireQuestion.order));
+          .where(
+            and(
+              eq(questionnaireQuestion.active, 1),
+              eq(questionnaireQuestion.delete, 0)
+            )
+          )
+          .orderBy(asc(questionnaireQuestion.order)),
 
-      // Load all active options for those questions
-      const optionRows = await db
-        .select()
-        .from(questionnaireOption)
-        .where(
-          and(
-            eq(questionnaireOption.active, 1),
-            eq(questionnaireOption.delete, 0)
+        db
+          .select()
+          .from(questionnaireOption)
+          .where(
+            and(
+              eq(questionnaireOption.active, 1),
+              eq(questionnaireOption.delete, 0)
+            )
           )
-        )
-        .orderBy(asc(questionnaireOption.order));
+          .orderBy(asc(questionnaireOption.order)),
+      ]);
 
       // Build category → questions → options tree
       const optionsByQuestion = new Map<number, QuestionnaireOption[]>();

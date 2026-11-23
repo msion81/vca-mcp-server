@@ -161,18 +161,35 @@ export const brickService = {
       const row = await getOwnedBrick(input.coachId, input.brickId);
       if (!row) return success(null);
 
-      const foodsRows = await db
-        .select({
-          detailId: foodEquivalenceDetail.id,
-          foodId: foodEquivalenceDetail.foodId,
-          foodName: food.name,
-          amount: foodEquivalenceDetail.amount,
-          measure: foodEquivalenceDetail.measure,
-          component: foodEquivalenceDetail.component,
-        })
-        .from(foodEquivalenceDetail)
-        .innerJoin(food, eq(food.id, foodEquivalenceDetail.foodId))
-        .where(eq(foodEquivalenceDetail.foodEquivalenceId, input.brickId));
+      // foodsRows and factRows only depend on input.brickId, not on each other — run concurrently.
+      const [foodsRows, factRows] = await Promise.all([
+        db
+          .select({
+            detailId: foodEquivalenceDetail.id,
+            foodId: foodEquivalenceDetail.foodId,
+            foodName: food.name,
+            amount: foodEquivalenceDetail.amount,
+            measure: foodEquivalenceDetail.measure,
+            component: foodEquivalenceDetail.component,
+          })
+          .from(foodEquivalenceDetail)
+          .innerJoin(food, eq(food.id, foodEquivalenceDetail.foodId))
+          .where(eq(foodEquivalenceDetail.foodEquivalenceId, input.brickId)),
+
+        db
+          .select({
+            componentId: component.id,
+            componentName: component.name,
+            componentCode: component.code,
+            measure: component.measure,
+            value: foodComponent.value,
+            amount: foodEquivalenceDetail.amount,
+          })
+          .from(foodEquivalenceDetail)
+          .innerJoin(foodComponent, eq(foodComponent.foodId, foodEquivalenceDetail.foodId))
+          .innerJoin(component, eq(component.id, foodComponent.componentId))
+          .where(eq(foodEquivalenceDetail.foodEquivalenceId, input.brickId)),
+      ]);
 
       const foods: BrickFoodRecord[] = foodsRows.map((item) => ({
         detailId: item.detailId,
@@ -182,20 +199,6 @@ export const brickService = {
         measure: item.measure,
         component: item.component,
       }));
-
-      const factRows = await db
-        .select({
-          componentId: component.id,
-          componentName: component.name,
-          componentCode: component.code,
-          measure: component.measure,
-          value: foodComponent.value,
-          amount: foodEquivalenceDetail.amount,
-        })
-        .from(foodEquivalenceDetail)
-        .innerJoin(foodComponent, eq(foodComponent.foodId, foodEquivalenceDetail.foodId))
-        .innerJoin(component, eq(component.id, foodComponent.componentId))
-        .where(eq(foodEquivalenceDetail.foodEquivalenceId, input.brickId));
 
       const computedById = new Map<number, BrickComponentFact>();
       for (const item of factRows) {
