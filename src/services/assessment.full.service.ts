@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
   athleteMedicalStudies,
@@ -40,27 +40,111 @@ export const assessmentFullService = {
 
       if (!row) return success(null);
 
-      // Notes by category — join to resolve category name + code
-      const noteRows = await db
-        .select({
-          id: nutritionAssessmentNotesByCategory.id,
-          notes: nutritionAssessmentNotesByCategory.notes,
-          categoryId: nutritionAssessmentNotesByCategory.questionnaireQuestionCategoryId,
-          categoryName: questionnaireQuestionsCategory.name,
-          categoryCode: questionnaireQuestionsCategory.code,
-          createdAt: nutritionAssessmentNotesByCategory.createdAt,
-        })
-        .from(nutritionAssessmentNotesByCategory)
-        .leftJoin(
-          questionnaireQuestionsCategory,
-          eq(
-            nutritionAssessmentNotesByCategory.questionnaireQuestionCategoryId,
-            questionnaireQuestionsCategory.id
+      // notes/answers/medical studies/reports only depend on input.id, not on
+      // each other — run them concurrently instead of as 4 sequential round trips.
+      const [noteRows, answerRows, studyRows, reportRows] = await Promise.all([
+        // Notes by category — join to resolve category name + code
+        db
+          .select({
+            id: nutritionAssessmentNotesByCategory.id,
+            notes: nutritionAssessmentNotesByCategory.notes,
+            categoryId: nutritionAssessmentNotesByCategory.questionnaireQuestionCategoryId,
+            categoryName: questionnaireQuestionsCategory.name,
+            categoryCode: questionnaireQuestionsCategory.code,
+            createdAt: nutritionAssessmentNotesByCategory.createdAt,
+          })
+          .from(nutritionAssessmentNotesByCategory)
+          .leftJoin(
+            questionnaireQuestionsCategory,
+            eq(
+              nutritionAssessmentNotesByCategory.questionnaireQuestionCategoryId,
+              questionnaireQuestionsCategory.id
+            )
           )
-        )
-        .where(
-          eq(nutritionAssessmentNotesByCategory.nutritionAssessmentId, input.id)
-        );
+          .where(
+            eq(nutritionAssessmentNotesByCategory.nutritionAssessmentId, input.id)
+          ),
+
+        // Answers — join question text + category + selected option text
+        db
+          .select({
+            id: nutritionAssessmentAnswer.id,
+            questionId: nutritionAssessmentAnswer.questionnaireQuestionId,
+            questionText: questionnaireQuestion.questionText,
+            categoryName: questionnaireQuestionsCategory.name,
+            answerText: nutritionAssessmentAnswer.answerText,
+            optionId: nutritionAssessmentAnswer.questionnaireOptionId,
+            optionText: questionnaireOption.optionText,
+            createdAt: nutritionAssessmentAnswer.createdAt,
+          })
+          .from(nutritionAssessmentAnswer)
+          .leftJoin(
+            questionnaireQuestion,
+            eq(
+              nutritionAssessmentAnswer.questionnaireQuestionId,
+              questionnaireQuestion.id
+            )
+          )
+          .leftJoin(
+            questionnaireQuestionByCategory,
+            eq(
+              questionnaireQuestion.id,
+              questionnaireQuestionByCategory.questionnaireQuestionId
+            )
+          )
+          .leftJoin(
+            questionnaireQuestionsCategory,
+            eq(
+              questionnaireQuestionByCategory.questionnaireQuestionsCategoryId,
+              questionnaireQuestionsCategory.id
+            )
+          )
+          .leftJoin(
+            questionnaireOption,
+            eq(
+              nutritionAssessmentAnswer.questionnaireOptionId,
+              questionnaireOption.id
+            )
+          )
+          .where(
+            eq(nutritionAssessmentAnswer.nutritionAssessmentId, input.id)
+          ),
+
+        // Medical studies — join athlete_medical_studies for full document fields
+        db
+          .select({
+            id: nutritionAssessmentMedicalStudies.id,
+            studyId: athleteMedicalStudies.id,
+            athleteId: athleteMedicalStudies.athleteId,
+            type: athleteMedicalStudies.type,
+            studyDate: athleteMedicalStudies.studyDate,
+            description: athleteMedicalStudies.description,
+            filePath: athleteMedicalStudies.filePath,
+            data: athleteMedicalStudies.data,
+            assessmentNotes: nutritionAssessmentMedicalStudies.notes,
+            createdAt: athleteMedicalStudies.createdAt,
+            updatedAt: athleteMedicalStudies.updatedAt,
+          })
+          .from(nutritionAssessmentMedicalStudies)
+          .leftJoin(
+            athleteMedicalStudies,
+            eq(
+              nutritionAssessmentMedicalStudies.athleteMedicalStudyId,
+              athleteMedicalStudies.id
+            )
+          )
+          .where(
+            eq(nutritionAssessmentMedicalStudies.nutritionAssessmentId, input.id)
+          ),
+
+        // Reports (comments are fetched separately, batched across all reports below)
+        db
+          .select()
+          .from(nutritionAssessmentReport)
+          .where(
+            eq(nutritionAssessmentReport.nutritionAssessmentId, input.id)
+          ),
+      ]);
 
       const notesByCategory: AssessmentNoteWithCategory[] = noteRows.map((n) => ({
         id: n.id,
@@ -70,51 +154,6 @@ export const assessmentFullService = {
         categoryCode: n.categoryCode ?? null,
         createdAt: n.createdAt,
       }));
-
-      // Answers — join question text + category + selected option text
-      const answerRows = await db
-        .select({
-          id: nutritionAssessmentAnswer.id,
-          questionId: nutritionAssessmentAnswer.questionnaireQuestionId,
-          questionText: questionnaireQuestion.questionText,
-          categoryName: questionnaireQuestionsCategory.name,
-          answerText: nutritionAssessmentAnswer.answerText,
-          optionId: nutritionAssessmentAnswer.questionnaireOptionId,
-          optionText: questionnaireOption.optionText,
-          createdAt: nutritionAssessmentAnswer.createdAt,
-        })
-        .from(nutritionAssessmentAnswer)
-        .leftJoin(
-          questionnaireQuestion,
-          eq(
-            nutritionAssessmentAnswer.questionnaireQuestionId,
-            questionnaireQuestion.id
-          )
-        )
-        .leftJoin(
-          questionnaireQuestionByCategory,
-          eq(
-            questionnaireQuestion.id,
-            questionnaireQuestionByCategory.questionnaireQuestionId
-          )
-        )
-        .leftJoin(
-          questionnaireQuestionsCategory,
-          eq(
-            questionnaireQuestionByCategory.questionnaireQuestionsCategoryId,
-            questionnaireQuestionsCategory.id
-          )
-        )
-        .leftJoin(
-          questionnaireOption,
-          eq(
-            nutritionAssessmentAnswer.questionnaireOptionId,
-            questionnaireOption.id
-          )
-        )
-        .where(
-          eq(nutritionAssessmentAnswer.nutritionAssessmentId, input.id)
-        );
 
       const answers: AssessmentAnswer[] = answerRows.map((a) => ({
         id: a.id,
@@ -126,33 +165,6 @@ export const assessmentFullService = {
         optionText: a.optionText ?? null,
         createdAt: a.createdAt,
       }));
-
-      // Medical studies — join athlete_medical_studies for full document fields
-      const studyRows = await db
-        .select({
-          id: nutritionAssessmentMedicalStudies.id,
-          studyId: athleteMedicalStudies.id,
-          athleteId: athleteMedicalStudies.athleteId,
-          type: athleteMedicalStudies.type,
-          studyDate: athleteMedicalStudies.studyDate,
-          description: athleteMedicalStudies.description,
-          filePath: athleteMedicalStudies.filePath,
-          data: athleteMedicalStudies.data,
-          assessmentNotes: nutritionAssessmentMedicalStudies.notes,
-          createdAt: athleteMedicalStudies.createdAt,
-          updatedAt: athleteMedicalStudies.updatedAt,
-        })
-        .from(nutritionAssessmentMedicalStudies)
-        .leftJoin(
-          athleteMedicalStudies,
-          eq(
-            nutritionAssessmentMedicalStudies.athleteMedicalStudyId,
-            athleteMedicalStudies.id
-          )
-        )
-        .where(
-          eq(nutritionAssessmentMedicalStudies.nutritionAssessmentId, input.id)
-        );
 
       const medicalStudies: AssessmentMedicalStudy[] = studyRows.map((s) => ({
         id: s.id,
@@ -168,43 +180,41 @@ export const assessmentFullService = {
         updatedAt: s.updatedAt ?? null,
       }));
 
-      // Reports + comments
-      const reportRows = await db
-        .select()
-        .from(nutritionAssessmentReport)
-        .where(
-          eq(nutritionAssessmentReport.nutritionAssessmentId, input.id)
-        );
-
-      const reports: AssessmentReport[] = [];
-      for (const rep of reportRows) {
+      // Comments for all reports in one query instead of one query per report.
+      const reportIds = reportRows.map((rep) => rep.id);
+      const commentsByReportId = new Map<number, AssessmentReportComment[]>();
+      if (reportIds.length > 0) {
         const commentRows = await db
           .select()
           .from(nutritionAssessmentReportComment)
           .where(
-            eq(nutritionAssessmentReportComment.nutritionAssessmentReportId, rep.id)
+            inArray(nutritionAssessmentReportComment.nutritionAssessmentReportId, reportIds)
           );
 
-        const comments: AssessmentReportComment[] = commentRows
-          .filter((c) => !c.deleted)
-          .map((c) => ({
+        for (const c of commentRows) {
+          if (c.deleted) continue;
+          if (c.nutritionAssessmentReportId == null) continue;
+          const current = commentsByReportId.get(c.nutritionAssessmentReportId) ?? [];
+          current.push({
             id: c.id,
             comment: c.comment,
             createdBy: c.createdBy,
             createdAt: c.createdAt,
             edited: c.edited,
-          }));
-
-        reports.push({
-          id: rep.id,
-          report: rep.report,
-          reportType: rep.reportType,
-          createdAt: rep.createdAt,
-          updatedAt: rep.updatedAt,
-          createdBy: rep.createdBy,
-          comments,
-        });
+          });
+          commentsByReportId.set(c.nutritionAssessmentReportId, current);
+        }
       }
+
+      const reports: AssessmentReport[] = reportRows.map((rep) => ({
+        id: rep.id,
+        report: rep.report,
+        reportType: rep.reportType,
+        createdAt: rep.createdAt,
+        updatedAt: rep.updatedAt,
+        createdBy: rep.createdBy,
+        comments: commentsByReportId.get(rep.id) ?? [],
+      }));
 
       return success({
         id: row.id,
