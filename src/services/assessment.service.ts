@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
   nutritionAssessment,
@@ -132,34 +132,46 @@ export const assessmentService = {
         .orderBy(desc(nutritionAssessment.id))
         .limit(limit);
 
-      const results: AssessmentWithNotes[] = [];
-      for (const row of rows) {
+      // Notes for all matched assessments in one query instead of one per row.
+      const assessmentIds = rows.map((row) => row.id);
+      const notesByAssessmentId = new Map<
+        number,
+        (typeof nutritionAssessmentNotesByCategory.$inferSelect)[]
+      >();
+      if (assessmentIds.length > 0) {
         const noteRows = await db
           .select()
           .from(nutritionAssessmentNotesByCategory)
           .where(
-            eq(
+            inArray(
               nutritionAssessmentNotesByCategory.nutritionAssessmentId,
-              row.id
+              assessmentIds
             )
           );
-        results.push(
-          toAssessmentWithNotes(
-            {
-              id: row.id,
-              athleteId: row.athleteId,
-              userRolesId: row.userRolesId,
-              notes: row.notes,
-              goal: row.goal,
-              activityLevel: row.activityLevel,
-              createdAt: row.createdAt,
-              closedAt: row.closedAt,
-              isAutoAssessment: row.isAutoAssessment,
-            },
-            noteRows
-          )
-        );
+        for (const note of noteRows) {
+          if (note.nutritionAssessmentId == null) continue;
+          const current = notesByAssessmentId.get(note.nutritionAssessmentId) ?? [];
+          current.push(note);
+          notesByAssessmentId.set(note.nutritionAssessmentId, current);
+        }
       }
+
+      const results: AssessmentWithNotes[] = rows.map((row) =>
+        toAssessmentWithNotes(
+          {
+            id: row.id,
+            athleteId: row.athleteId,
+            userRolesId: row.userRolesId,
+            notes: row.notes,
+            goal: row.goal,
+            activityLevel: row.activityLevel,
+            createdAt: row.createdAt,
+            closedAt: row.closedAt,
+            isAutoAssessment: row.isAutoAssessment,
+          },
+          notesByAssessmentId.get(row.id) ?? []
+        )
+      );
       return success(results);
     } catch (err) {
       return error(
