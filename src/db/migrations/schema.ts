@@ -611,6 +611,9 @@ export const appointmentDuration = pgTable("appointment_duration", {
 	isDefault: boolean("is_default").default(false).notNull(),
 	color: text(),
 	useGoogleCalendar: boolean("use_google_calendar").default(false).notNull(),
+	// Soft delete (vca-server migration 0108). Archived durations stay for
+	// existing appointments/billing but can't be picked for new ones.
+	archivedAt: timestamp("archived_at", { mode: 'string' }),
 }, (table) => [
 	foreignKey({
 			columns: [table.userRolesId],

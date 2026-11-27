@@ -109,9 +109,15 @@ async function coachHasAthlete(
   return row != null;
 }
 
+/**
+ * Returns the duration id if the coach may use it. Archived (soft-deleted)
+ * durations are rejected unless `allowArchived` — used on update when the
+ * appointment already has that duration, so editing it doesn't fail.
+ */
 async function getDurationForCoach(
   coachId: number,
-  durationId: number
+  durationId: number,
+  { allowArchived = false }: { allowArchived?: boolean } = {}
 ): Promise<number | null> {
   if (!db) return null;
   const [row] = await db
@@ -123,7 +129,8 @@ async function getDurationForCoach(
         or(
           eq(appointmentDuration.userRolesId, coachId),
           isNull(appointmentDuration.userRolesId)
-        )
+        ),
+        allowArchived ? undefined : isNull(appointmentDuration.archivedAt)
       )
     )
     .limit(1);
@@ -543,9 +550,13 @@ export const appointmentService = {
         })
         .from(appointmentDuration)
         .where(
-          or(
-            eq(appointmentDuration.userRolesId, input.coachId),
-            isNull(appointmentDuration.userRolesId)
+          and(
+            or(
+              eq(appointmentDuration.userRolesId, input.coachId),
+              isNull(appointmentDuration.userRolesId)
+            ),
+            // Archived (deleted) presets can't be used for new appointments.
+            isNull(appointmentDuration.archivedAt)
           )
         )
         .orderBy(
@@ -711,6 +722,7 @@ export const appointmentService = {
         .select({
           id: appointment.id,
           userRolesId: appointment.userRolesId,
+          durationId: appointment.durationId,
         })
         .from(appointment)
         .where(
@@ -725,7 +737,10 @@ export const appointmentService = {
 
       const durationToValidate = input.durationId;
       if (typeof durationToValidate === "number" && durationToValidate > 0) {
-        const okId = await getDurationForCoach(input.coachId, durationToValidate);
+        const okId = await getDurationForCoach(input.coachId, durationToValidate, {
+          // Keeping the appointment's own (possibly archived) duration is fine.
+          allowArchived: durationToValidate === current.durationId,
+        });
         if (okId == null)
           return error("durationId is not allowed for this coach");
       }
